@@ -235,7 +235,7 @@ class CameraScreen extends ConsumerWidget {
   /// Start recording
   Future<bool> start() async {
     if(_testMode) {
-      _env.recording_mode.val = 2;
+      _env.recording_mode.val = 1;
       _env.image_interval_sec.val = 5;
       _env.autostop_sec.val = 20;
     }

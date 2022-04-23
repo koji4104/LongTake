@@ -183,10 +183,15 @@ class PhotoListScreen extends ConsumerWidget {
   }
   _saveFile(List<SaveData> list) async {
     try {
-      list.asMap().forEach((int index, SaveData data) async {
-        await GallerySaver.saveVideo(data.path);
-      });
+      for(SaveData data in list){
+        if(data.path.contains('.jpg'))
+          await GallerySaver.saveImage(data.path);
+        else if(data.path.contains('.mp4'))
+          await GallerySaver.saveVideo(data.path);
+        await new Future.delayed(new Duration(milliseconds:100));
+      }
     } on Exception catch (e) {
+      print('-- _saveFile ${e.toString()}');
     }
   }
 
@@ -198,11 +203,12 @@ class PhotoListScreen extends ConsumerWidget {
     showDialogEx(context, msg, btn, _deleteFile, list);
   }
   _deleteFile(List<SaveData> list) async {
-    list.asMap().forEach((int index, SaveData data) async {
+    for(SaveData data in list){
       await File(data.path).delete();
-      // ToDo
-      await File(data.thumb).delete();
-    });
+      if(await File(data.thumb).exists())
+        await File(data.thumb).delete();
+      await new Future.delayed(new Duration(milliseconds:100));
+    };
   }
 
   /// Show dialog (OK or Cancel)
@@ -277,7 +283,7 @@ class MyCard extends ConsumerWidget {
         if(data.path.contains('.mp4'))
           Positioned(
             top: 6.0, left: 0.0,
-            child: Text(' ' + (data.byte/1024/1024).toString() + ' MB',
+            child: Text(' ' + (data.byte/1024/1024).toInt().toString() + ' MB',
               style: TextStyle(fontSize:14, color:Colors.white, backgroundColor:Colors.black38),
             ),),
         Positioned(
@@ -286,7 +292,7 @@ class MyCard extends ConsumerWidget {
             backgroundColor: _selected ? Colors.black54 : Color(0x00000000),
             child: Icon(_selected ? Icons.check : null,
             size: 36,
-            color: Color(0xFFFF3355)
+            color: Color(0xFFFF0000)
         ))),
       ]
     );
