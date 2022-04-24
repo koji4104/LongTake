@@ -13,13 +13,15 @@ class EnvData {
   List<String> keys;
   String name;
   String desc;
+  String pref;
 
   EnvData({
     required int this.val,
     required List<int> this.vals,
     required List<String> this.keys,
     required String this.name,
-    required String this.desc}){
+    required String this.desc,
+    required String this.pref}){
     set(val);
   }
 
@@ -49,14 +51,15 @@ class Environment {
     keys:['mode_video','mode_image'],
     name:'recording_mode',
     desc:'recording_mode_desc',
+    pref:'recording_mode',
   );
-
   EnvData video_interval_sec = EnvData(
     val:3600,
     vals:[1800,3600,7200],
     keys:['1800','3600','7200'],
     name:'video_interval_sec',
     desc:'video_interval_sec_desc',
+    pref:'video_interval_sec',
   );
   EnvData image_interval_sec = EnvData(
     val:60,
@@ -64,6 +67,7 @@ class Environment {
     keys:['60','300','600'],
     name:'image_interval_sec',
     desc:'image_interval_sec_desc',
+    pref:'image_interval_sec',
   );
   EnvData max_size_gb = EnvData(
     val:10,
@@ -71,6 +75,7 @@ class Environment {
     keys:['1','10','100'],
     name:'max_size_gb',
     desc:'max_size_gb_desc',
+    pref:'max_size_gb',
   );
   EnvData autostop_sec = EnvData(
     val:3600,
@@ -78,6 +83,7 @@ class Environment {
     keys:['0','3600','21600','43200'],
     name:'autostop_sec',
     desc:'autostop_sec_desc',
+    pref:'autostop_sec',
   );
   EnvData camera_height = EnvData(
     val:480,
@@ -85,6 +91,7 @@ class Environment {
     keys:['240','480','720','1080'],
     name:'camera_height',
     desc:'camera_height_desc',
+    pref:'camera_height',
   );
 
   load() async {
@@ -102,15 +109,10 @@ class Environment {
     }
   }
 
-  save() async {
+  save(EnvData data) async {
     if(kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('recording_mode', recording_mode.val);
-    await prefs.setInt('video_interval_sec', video_interval_sec.val);
-    await prefs.setInt('image_interval_sec', image_interval_sec.val);
-    await prefs.setInt('max_size_gb', max_size_gb.val);
-    await prefs.setInt('autostop_sec', autostop_sec.val);
-    await prefs.setInt('camera_height', camera_height.val);
+    await prefs.setInt(data.pref, data.val);
   }
 }
 
@@ -142,7 +144,6 @@ class SettingsScreen extends ConsumerWidget {
 
     return WillPopScope(
       onWillPop: () async {
-        await env.save();
         Navigator.of(context).pop(true);
         return Future.value(false);
       },
@@ -202,33 +203,40 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget MyValue({required EnvData data}) {
+    TextStyle ts = TextStyle(fontSize:16, color:Colors.white);
     return Container(
       decoration: BoxDecoration(
         color: Color(0xFF333333),
         borderRadius: BorderRadius.circular(3),
       ),
-      margin: const EdgeInsets.symmetric(vertical:3, horizontal:10),
-      padding: const EdgeInsets.only(left:8, right:10, top:2, bottom:2),
-      child: Row(children: [
-        Text(l10n(data.name)),
-        Expanded(child: SizedBox(width:1)),
-        Text(l10n(data.key)),
-        SizedBox(width:4),
-        IconButton(
-          icon: Icon(Icons.arrow_forward_ios, color:Colors.white),
-          iconSize: 14.0,
-          onPressed:(){
-            Navigator.of(_context!).push(
-              MaterialPageRoute<int>(
-                builder: (BuildContext context) {
-                  return RadioListScreen(data:data);
-                })).then((ret){
+      margin: const EdgeInsets.symmetric(vertical:4, horizontal:12),
+      padding: const EdgeInsets.only(left:12, right:10, top:10, bottom:10),
+      child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+        onTap:(){
+          Navigator.of(_context!).push(
+            MaterialPageRoute<int>(
+              builder: (BuildContext context) {
+                return RadioListScreen(data:data);
+              })).then((ret){
+                print('ret=${ret}');
+                if(data.val!=ret) {
                   data.set(ret);
+                  env.save(data);
                   _ref!.read(SettingsScreenProvider).notifyListeners();
-            });
-          },
-        ),
-      ]));
+                }
+              }
+          );
+        },
+        child: Row(children:[
+          Text(l10n(data.name), style:ts),
+          Expanded(child: SizedBox(width:1)),
+          Text(l10n(data.key), style:ts),
+          SizedBox(width:8),
+          Icon(Icons.arrow_forward_ios, size:14, color:Colors.white),
+        ])
+      )
+    );
   }
 
   String l10n(String text){
