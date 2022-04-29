@@ -617,9 +617,7 @@ class CameraScreen extends ConsumerWidget {
   }
 }
 
-
 final screenSaverProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
-
 class ScreenSaver extends ConsumerWidget {
   Timer? _timer;
   DateTime? _waitTime;

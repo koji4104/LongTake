@@ -150,6 +150,7 @@ class SettingsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n("settings_title")),
+          backgroundColor:Color(0xFF000000),
           actions: <Widget>[],
         ),
         body:FutureBuilder(
@@ -266,7 +267,7 @@ class RadioListScreen extends ConsumerWidget {
         return Future.value(true);
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n(data.name))),
+        appBar: AppBar(title: Text(l10n(data.name)), backgroundColor:Color(0xFF000000),),
         body: Container(
           margin:EdgeInsets.only(top:12, left:4, right:4),
           child:getListView()

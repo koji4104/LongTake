@@ -36,7 +36,7 @@ class PhotoListScreen extends ConsumerWidget {
     this.ref = ref;
     int num = ref.watch(photoListProvider).num;
     int size = ref.watch(photoListProvider).size;
-    int sizegb = (size/1024/1024/1024).toInt();
+    int sizemb = (size/1024/1024).toInt();
     //print('-- num=${num}');
 
     Future.delayed(Duration.zero, () => init(context,ref));
@@ -44,6 +44,7 @@ class PhotoListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        backgroundColor:Color(0xFF000000),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.save),
@@ -54,24 +55,27 @@ class PhotoListScreen extends ConsumerWidget {
             icon: Icon(Icons.delete),
             iconSize: 32.0,
             onPressed: () => _deleteFileWithDialog(context,ref),
-          )
+          ),
+          SizedBox(width: 10),
         ],
       ),
       body: Stack(children: <Widget>[
-      Row(mainAxisAlignment: MainAxisAlignment.start,
+      Container(
+      margin: EdgeInsets.symmetric(vertical:4, horizontal:10),
+          child:Row(mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            SizedBox(width: 12),
             Icon(Icons.image, size: 12.0, color: Colors.white),
             SizedBox(width: 4),
             Text(num.toString()),
             SizedBox(width: 8),
             Icon(Icons.folder, size: 12.0, color: Colors.white),
             SizedBox(width: 4),
-            Text(sizegb.toString() + ' GB'),
+            Text(sizemb.toString() + ' MB'),
           ]
+      )
       ),
       Container(
-        margin: EdgeInsets.only(top:20),
+        margin: EdgeInsets.only(top:24),
         child:getListView(context,ref),
         )
       ])

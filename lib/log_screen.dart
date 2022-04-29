@@ -147,6 +147,7 @@ class LogScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Logs'),
+        backgroundColor:Color(0xFF000000),
         actions: <Widget>[],
       ),
       body: getTable(context,ref,list),
