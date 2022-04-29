@@ -10,10 +10,10 @@ class redrawNotifier extends ChangeNotifier {
 
 final selectedListProvider = ChangeNotifierProvider((ref) => selectedListNotifier(ref));
 class selectedListNotifier extends ChangeNotifier {
-  List<SaveData> list = [];
+  List<PhotoData> list = [];
   selectedListNotifier(ref){}
 
-  select(SaveData data) {
+  select(PhotoData data) {
     if(list.contains(data)) {
       list.remove(data);
     } else {
@@ -22,7 +22,7 @@ class selectedListNotifier extends ChangeNotifier {
     this.notifyListeners();
   }
 
-  bool contains(SaveData data) {
+  bool contains(PhotoData data) {
     return list.contains(data);
   }
 
@@ -39,10 +39,6 @@ class photoListNotifier extends ChangeNotifier {
   int size = 0;
 }
 
-final pastProvider = StateProvider<String>((ref) {
-  return '';
-});
-
 final isScreenSaverProvider = StateProvider<bool>((ref) {
   return false;
 });
@@ -50,3 +46,8 @@ final isScreenSaverProvider = StateProvider<bool>((ref) {
 final isRecordingProvider = StateProvider<bool>((ref) {
   return false;
 });
+
+final startTimeProvider = StateProvider<DateTime?>((ref) {
+  return null;
+});
+

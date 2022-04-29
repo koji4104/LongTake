@@ -44,7 +44,7 @@ class EnvData {
 
 /// Environment
 class Environment {
-  /// 1=video, 2=image
+  /// 1=video, 2=image, 3=audio
   EnvData recording_mode = EnvData(
     val:1,
     vals:[1,2],
@@ -55,8 +55,8 @@ class Environment {
   );
   EnvData video_interval_sec = EnvData(
     val:3600,
-    vals:[1800,3600,7200],
-    keys:['1800','3600','7200'],
+    vals:[60,1800,3600,7200],
+    keys:['1','30','60','120'],
     name:'video_interval_sec',
     desc:'video_interval_sec_desc',
     pref:'video_interval_sec',
@@ -64,7 +64,7 @@ class Environment {
   EnvData image_interval_sec = EnvData(
     val:60,
     vals:[60,300,600],
-    keys:['60','300','600'],
+    keys:['1','5','10'],
     name:'image_interval_sec',
     desc:'image_interval_sec_desc',
     pref:'image_interval_sec',
@@ -79,8 +79,8 @@ class Environment {
   );
   EnvData autostop_sec = EnvData(
     val:3600,
-    vals:[0,3600,21600,43200],
-    keys:['0','3600','21600','43200'],
+    vals:[120,3600,21600,43200,86400],
+    keys:['2 min','1','6','12','24'],
     name:'autostop_sec',
     desc:'autostop_sec_desc',
     pref:'autostop_sec',
@@ -88,7 +88,7 @@ class Environment {
   EnvData camera_height = EnvData(
     val:480,
     vals:[240,480,720,1080],
-    keys:['240','480','720','1080'],
+    keys:['320X240','640x480','1280x720','1920x1080'],
     name:'camera_height',
     desc:'camera_height_desc',
     pref:'camera_height',
@@ -167,25 +167,18 @@ class SettingsScreen extends ConsumerWidget {
               MyValue(data: env.max_size_gb),
               MyValue(data: env.autostop_sec),
               MyValue(data: env.camera_height),
+
               MyText(Localized.of(context).text("precautions")),
-              
-              Container(
-                margin: const EdgeInsets.symmetric(vertical:4, horizontal:12),
-                padding: const EdgeInsets.only(left:4, right:6, top:2, bottom:2),
-                child: Row(children: [
-                  Text('Log'),
-                  Expanded(child: SizedBox(width:1)),
-                  IconButton(
-                    icon: Icon(Icons.arrow_forward_ios, color:Colors.white),
-                    iconSize: 14.0,
-                    onPressed:(){
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => LogScreen(),
-                        ));
-                    }
-                  ),
-              ])),
+
+              MyListTile(
+                title:Text('Log'),
+                onTap:(){
+                  Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LogScreen(),
+                  ));
+                }
+              ),
             ]));
         })
       )
@@ -202,40 +195,44 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Widget MyListTile({required Widget title, required Function() onTap}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal:14, vertical:3),
+      child: ListTile(
+        shape: BeveledRectangleBorder(
+          borderRadius: BorderRadius.circular(3),
+        ),
+        title: title,
+        trailing: Icon(Icons.arrow_forward_ios),
+        tileColor: Color(0xFF333333),
+        hoverColor: Color(0xFF444444),
+        onTap: onTap
+      ),
+    );
+  }
+
   Widget MyValue({required EnvData data}) {
     TextStyle ts = TextStyle(fontSize:16, color:Colors.white);
-    return Container(
-      decoration: BoxDecoration(
-        color: Color(0xFF333333),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      margin: const EdgeInsets.symmetric(vertical:4, horizontal:12),
-      padding: const EdgeInsets.only(left:12, right:10, top:10, bottom:10),
-      child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-        onTap:(){
-          Navigator.of(_context!).push(
-            MaterialPageRoute<int>(
-              builder: (BuildContext context) {
-                return RadioListScreen(data:data);
-              })).then((ret){
-                print('ret=${ret}');
-                if(data.val!=ret) {
-                  data.set(ret);
-                  env.save(data);
-                  _ref!.read(SettingsScreenProvider).notifyListeners();
-                }
-              }
-          );
-        },
-        child: Row(children:[
-          Text(l10n(data.name), style:ts),
-          Expanded(child: SizedBox(width:1)),
-          Text(l10n(data.key), style:ts),
-          SizedBox(width:8),
-          Icon(Icons.arrow_forward_ios, size:14, color:Colors.white),
-        ])
-      )
+    return MyListTile(
+      title:Row(children:[
+        Text(l10n(data.name), style:ts),
+        Expanded(child: SizedBox(width:1)),
+        Text(l10n(data.key), style:ts),
+      ]),
+      onTap:() {
+        Navigator.of(_context!).push(
+          MaterialPageRoute<int>(
+            builder: (BuildContext context) {
+              return RadioListScreen(data: data);
+          })).then((ret) {
+            if (data.val != ret) {
+              data.set(ret);
+              env.save(data);
+              _ref!.read(SettingsScreenProvider).notifyListeners();
+            }
+          }
+        );
+      }
     );
   }
 
@@ -281,17 +278,24 @@ class RadioListScreen extends ConsumerWidget {
   Widget getListView() {
     List<Widget> list = [];
     for(int i=0; i<data.vals.length; i++){
-      list.add(RadioListTile(
-        tileColor: Color(0xFF333333),
-        activeColor: Color(0xFFFF4444),
-        title: Text(l10n(data.keys[i])),
-        value: data.vals[i],
-        groupValue: selected,
-        onChanged: (value) => _onRadioSelected(data.vals[i]),
-      ));
+      list.add(
+        Container(
+          margin: EdgeInsets.symmetric(horizontal:14, vertical:3),
+          child: RadioListTile(
+          shape: BeveledRectangleBorder(
+            borderRadius: BorderRadius.circular(3),
+          ),
+          tileColor: Color(0xFF333333),
+          activeColor: Color(0xFFFF4444),
+          title: Text(l10n(data.keys[i])),
+          value: data.vals[i],
+          groupValue: selected,
+          onChanged: (value) => _onRadioSelected(data.vals[i]),
+      )));
     }
     list.add(MyText(data.desc));
     return Column(children:list);
+
   }
 
   _onRadioSelected(value) {

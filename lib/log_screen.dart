@@ -36,31 +36,31 @@ String sample = '''
 2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
 2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
 2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
+2022-04-06 00:00:00\tuser\terr\tapp\tmessage1
 2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
 2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
+2022-04-06 00:20:20\tuser\tinfo\tapp\tmessage4
 2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
+2022-04-01 00:00:20\tuser\terr\tapp\tmessage1
+2022-04-02 00:20:00\tuser\twarn\tapp\tmessage2
+2022-04-06 00:00:20\tuser\tinfo\tapp\tmessage3
+2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
+2022-04-05 00:20:00\tuser\tinfo\tapp\tmessage5
 2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
+2022-04-02 00:00:20\tuser\twarn\tapp\tmessage2
+2022-04-06 00:20:00\tuser\tinfo\tapp\tmessage3
+2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
+2022-04-05 00:00:20\tuser\terr\tapp\tmessage5
+2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
+2022-04-06 00:10:00\tuser\twarn\tapp\tstart
+2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
+2022-04-04 00:00:00\tuser\tinfo\tapp\tstart
+2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
+2022-04-07 00:10:00\tuser\terr\tapp\tmessage1
 2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
 2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
+2022-04-06 00:10:00\tuser\tinfo\tapp\tstart
+2022-04-05 00:00:00\tuser\tinfo\tapp\tstart
 ''';
 
 final logListProvider = StateProvider<List<MyLogData>>((ref) {
@@ -93,8 +93,8 @@ class MyLog {
     await Directory('${appdir.path}/log').create(recursive: true);
     final String path = '${appdir.path}/log/$_fname';
     
-    // length byte 10kb
-    if(await File(path).exists() && File(path).lengthSync()>10*1024) {
+    // length byte 100kb
+    if(await File(path).exists() && File(path).lengthSync()>100*1024) {
       if(await File(path+'.1').exists())
         File(path+'.1').deleteSync();
       File(path).renameSync(path+'.1');
@@ -157,63 +157,43 @@ class LogScreen extends ConsumerWidget {
     List<MyLogData> list = await MyLog.read();
     ref.watch(logListProvider.state).state = list;
   }
+
   Widget getTable(BuildContext context, WidgetRef ref, List<MyLogData> list) {
     List<TextSpan> spans = [];
-    for(MyLogData d in list){
-      String stime = DateFormat("yyyy/MM/dd HH:mm").format(DateTime.parse(d.time));
+    for(MyLogData d in list) {
+      String stime = DateFormat("yy/MM/dd HH:mm").format(DateTime.parse(d.time));
       Wrap w = Wrap(children:[getText(stime),getText(d.msg)]);
       spans.add(TextSpan(text:stime));
 
       if (d.level.contains('err'))
-        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFFF6666))));
+        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFFF8888))));
       else if (d.level.contains('warn'))
-        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFcccc66))));
+        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFdddd22))));
       else
-        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFDDDDDD))));
-
+        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFbbbbff))));
       spans.add(TextSpan(text:' '+d.msg+'\n'));
     }
+
     return Container(
-        height: MediaQuery.of(context).size.height-120,
-        color: Colors.black54,
-        margin: EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-        child: SingleChildScrollView(
-            //controller: _controller,
-            scrollDirection: Axis.vertical,
-            padding: EdgeInsets.fromLTRB(4, 4, 4, 4),
-            child: SelectableText.rich(
-                TextSpan(
-                    style:TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace'
-                    ),
-                    children: spans
-                )
-            )
+      height: MediaQuery.of(context).size.height-120,
+      color: Colors.black54,
+      margin: EdgeInsets.symmetric(vertical:20, horizontal:10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        padding: EdgeInsets.fromLTRB(4,4,4,4),
+        child: SelectableText.rich(
+          TextSpan(
+            style: TextStyle(fontSize:13, fontFamily:'monospace'),
+            children: spans
+          )
         )
+      )
     );
   }
 
-  Widget getTable2(BuildContext context, WidgetRef ref, List<MyLogData> list) {
-  List<Wrap> rows = [];
-  for(MyLogData d in list){
-    String stime = DateFormat("yyyy/MM/dd HH:mm").format(DateTime.parse(d.time));
-    Wrap w = Wrap(children:[getText(stime),getText(d.msg)]);
-    rows.add(w);
-  }
-  return Container(
-    padding: EdgeInsets.fromLTRB(8,8,8,8),
-    
-    child: SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: rows
-    )));
-  }
   Widget getText(String s) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical:1, horizontal:4),
       child: Text(s, style:TextStyle(fontSize:14, color:Colors.white)),
     );
   } 
