@@ -11,6 +11,7 @@ import 'package:video_thumbnail/video_thumbnail.dart' as video_thumbnail;
 import 'model.dart';
 import 'package:flutter_video_info/flutter_video_info.dart';
 import 'localizations.dart';
+import 'package:video_player/video_player.dart';
 
 class PhotoListScreen extends ConsumerWidget {
   PhotoListScreen(){}
@@ -337,28 +338,92 @@ class MyCard extends ConsumerWidget {
   }
 }
 
+final previewScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 class PreviewScreen extends ConsumerWidget {
   PreviewScreen({PhotoData? data}) {
     if(data!=null) this.data = data;
+
   }
   PhotoData data = PhotoData('');
+  VideoPlayerController? _controller;
+  bool _init = false;
+
+  void init(BuildContext context, WidgetRef ref){
+    if(_init == false){
+      try{
+        if(data.path.contains('.mp4')){
+          print('-- init mp4');
+          _controller = VideoPlayerController.file(File(data.path));
+          if(_controller!=null) {
+            _controller!.initialize().then((_) {
+              ref.read(previewScreenProvider).notifyListeners();
+              print('-- notifyListeners');
+            });
+          } else {
+            print('-- _controller is null');
+          }
+        }
+      } on Exception catch (e) {
+        print('-- PreviewScreen.init ${e.toString()}');
+      }
+      _init = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref){
+    Future.delayed(Duration.zero, () => init(context,ref));
+    ref.watch(previewScreenProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Preview'),
         actions: <Widget>[],
       ),
       body: Container(
-        margin: EdgeInsets.all(20),
+        margin: EdgeInsets.all(10),
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          child: kIsWeb ? Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain))
-            : Center(child:Image.file(File(data.thumb), fit:BoxFit.contain)),
+          child: player(),
           onTap:(){
           },
         ),
     ));
+  }
+
+  Widget player() {
+    if(kIsWeb) {
+      return Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain));
+
+    } else if(data.path.contains('.mp4')) {
+      if(_controller==null || _controller!.value.isInitialized==false){
+        return Container();
+      } else {
+        return Stack(children: <Widget>[
+          Center(child:AspectRatio(
+            aspectRatio: _controller!.value.aspectRatio,
+            child: VideoPlayer(_controller!),
+          )),
+          Center(child:CircleAvatar(
+            backgroundColor: Colors.black54,
+            radius: 28.0,
+            child: IconButton(
+              icon:Icon(_controller!.value.isPlaying ? Icons.pause : Icons.play_arrow),
+              iconSize: 38.0,
+              onPressed:(){
+                _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+              }
+            ),
+          )),
+        ]);
+      }
+
+    } else if(data.path.contains('.jpg')){
+      return Center(child:Image.file(File(data.path), fit:BoxFit.contain));
+
+    } else {
+      return Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain));
+
+    }
   }
 }
