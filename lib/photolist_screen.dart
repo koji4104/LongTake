@@ -72,7 +72,7 @@ class PhotoListScreen extends ConsumerWidget {
             SizedBox(width: 4),
             Text(sizemb.toString() + ' MB'),
           ]
-      )
+        )
       ),
       Container(
         margin: EdgeInsets.only(top:24),

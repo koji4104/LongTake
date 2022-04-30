@@ -55,16 +55,16 @@ class Environment {
   );
   EnvData video_interval_sec = EnvData(
     val:3600,
-    vals:[60,1800,3600,7200],
-    keys:['1','30','60','120'],
+    vals:[30,1800,3600,7200],
+    keys:['30 sec','30','60','120'],
     name:'video_interval_sec',
     desc:'video_interval_sec_desc',
     pref:'video_interval_sec',
   );
   EnvData image_interval_sec = EnvData(
     val:60,
-    vals:[60,300,600],
-    keys:['1','5','10'],
+    vals:[10,60,300,600],
+    keys:['10 sec','1','5','10'],
     name:'image_interval_sec',
     desc:'image_interval_sec_desc',
     pref:'image_interval_sec',
@@ -79,8 +79,8 @@ class Environment {
   );
   EnvData autostop_sec = EnvData(
     val:3600,
-    vals:[120,3600,21600,43200,86400],
-    keys:['2 min','1','6','12','24'],
+    vals:[60,3600,21600,43200,86400],
+    keys:['60 sec','1','6','12','24'],
     name:'autostop_sec',
     desc:'autostop_sec_desc',
     pref:'autostop_sec',

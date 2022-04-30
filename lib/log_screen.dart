@@ -71,13 +71,13 @@ class MyLog {
   static String _fname = "app.log";
   
   static info(String msg) async {
-    MyLog.write('info', 'app', msg);
+    await MyLog.write('info', 'app', msg);
   }
   static warn(String msg) async {
-    MyLog.write('warn', 'app', msg);
+    await MyLog.write('warn', 'app', msg);
   }
   static err(String msg) async {
-    MyLog.write('err', 'app', msg);
+    await MyLog.write('err', 'app', msg);
   }
   static write(String level, String event, String msg) async {
     print('-- ${level} ${msg}');
@@ -101,7 +101,7 @@ class MyLog {
       File(path).deleteSync();
     }    
     String tsv = '$t\t$u\t$l\t$e\t$msg\n';
-    File(path).writeAsStringSync(tsv, mode:FileMode.append, flush:true);
+    await File(path).writeAsString(tsv, mode:FileMode.append, flush:true);
   }
 
   static Future<List<MyLogData>> read() async {
@@ -162,16 +162,15 @@ class LogScreen extends ConsumerWidget {
   Widget getTable(BuildContext context, WidgetRef ref, List<MyLogData> list) {
     List<TextSpan> spans = [];
     for(MyLogData d in list) {
-      String stime = DateFormat("yy/MM/dd HH:mm").format(DateTime.parse(d.time));
+      String stime = DateFormat("yyyy/MM/dd HH:mm").format(DateTime.parse(d.time));
       Wrap w = Wrap(children:[getText(stime),getText(d.msg)]);
       spans.add(TextSpan(text:stime));
 
       if (d.level.contains('err'))
         spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFFF8888))));
       else if (d.level.contains('warn'))
-        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFdddd22))));
-      else
-        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFbbbbff))));
+        spans.add(TextSpan(text: ' '+d.level, style: TextStyle(color:Color(0xFFeeee44))));
+
       spans.add(TextSpan(text:' '+d.msg+'\n'));
     }
 

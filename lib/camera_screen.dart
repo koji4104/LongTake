@@ -7,6 +7,7 @@ import 'settings_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 import 'dart:math';
+import 'package:wakelock/wakelock.dart';
 
 import 'package:disk_space/disk_space.dart';
 import 'package:intl/intl.dart';
@@ -98,10 +99,13 @@ class CameraScreen extends ConsumerWidget {
     this._isScreensaver = ref.watch(isScreenSaverProvider);
     this._isRecording = ref.watch(isRecordingProvider);
 
-    if(_isScreensaver)
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays:[]);
-    else
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays:[]);
+    if(_isScreensaver) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      Wakelock.enable();
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: []);
+      Wakelock.disable();
+    }
 
     return Scaffold(
       key: _scaffoldKey,
@@ -305,10 +309,10 @@ class CameraScreen extends ConsumerWidget {
 
     if(_env.recording_mode.val==1) {
       startRecording();
-      MyLog.info("Start video");
+      await MyLog.info("Start video");
     } else if(_env.recording_mode.val==2) {
       photoShooting();
-      MyLog.info("Start photo");
+      await MyLog.info("Start photo");
     }
 
     return true;
@@ -318,20 +322,14 @@ class CameraScreen extends ConsumerWidget {
   Future<void> onStop() async {
     print('-- onStop');
     try {
-      String s = '';
-      if(_startTime!=null) {
-        Duration dur = DateTime.now().difference(_startTime!);
-        MyLog.info("Stop " + dur2str(dur));
-      } else {
-        MyLog.info("Stop");
-      }
-
+      await MyLog.info("Stopped " + recordingTimeString());
       if(_batteryLevelStart>0) {
-        MyLog.info("Battery ${_batteryLevelStart}>${_batteryLevel}%");
+        await MyLog.info("Battery ${_batteryLevelStart}>${_batteryLevel}%");
       }
-
       _isRecording = false;
-      _startTime = _recordTime = null;
+      _startTime = null;
+      _recordTime = null;
+
       if(_env.recording_mode.val==1)
         await stopRecording();
 
@@ -365,9 +363,9 @@ class CameraScreen extends ConsumerWidget {
       XFile xfile = await _controller!.stopVideoRecording();
       moveFile(File(xfile.path), await getSavePath('.mp4'));
     } on CameraException catch (e) {
-      MyLog.warn(e.code);
+      await MyLog.warn(e.code);
       if(e.description!=null)
-        MyLog.warn(e.description!);
+        await MyLog.warn(e.description!);
       showSnackBar('${e.code}\n${e.description}');
       //_showCameraException(e);
     }
@@ -389,7 +387,7 @@ class CameraScreen extends ConsumerWidget {
     if (_controller==null)
       return;
     try {
-      print('-- isRecordingVideo=${_controller!.value.isRecordingVideo}');
+      print('-- photoShooting');
       await _controller!.startVideoRecording();
       await Future.delayed(Duration(seconds: 1));
       XFile xfile = await _controller!.stopVideoRecording();
@@ -456,28 +454,29 @@ class CameraScreen extends ConsumerWidget {
     if(_isRecording==true && _startTime!=null) {
       Duration dur = DateTime.now().difference(_startTime!);
       if (_env.autostop_sec.val > 0 && dur.inSeconds>_env.autostop_sec.val) {
-        MyLog.info("Auto stop");
-        stopRecording();
+        await MyLog.info("Autostop");
+        onStop();
         if(_ref!=null)
           _ref!.read(isRecordingProvider.state).state = false;
       }
     }
 
-    // low battery
+    // low battery, low disk
     if(DateTime.now().second == 0) {
       this._batteryLevel = await _battery.batteryLevel;
       if (this._batteryLevel < 10) {
-        MyLog.warn("Battery is 10% or less.");
-        onStop();
+        await MyLog.warn("Low battery");
+        stopRecording();
       } else if (await checkDiskFree()==false) {
-        onStop();
+        await MyLog.warn("Low capacity");
+        stopRecording();
       }
     }
 
     if(_state!=null) {
       if (_state == AppLifecycleState.inactive ||
           _state == AppLifecycleState.detached) {
-        MyLog.warn("App is stop or background");
+        await MyLog.warn("App is stop or background");
         onStop();
       }
     }
@@ -530,7 +529,7 @@ class CameraScreen extends ConsumerWidget {
         freeGb = (freeMb / 1024.0).toInt();
       if(freeGb < enough) {
         if(lastDiskFreeError==null || DateTime.now().difference(lastDiskFreeError!).inSeconds>120) {
-          MyLog.warn("Not enough free space ${freeGb.toString()}<${enough} GB");
+          await MyLog.warn("Not enough free space ${freeGb.toString()}<${enough} GB");
           lastDiskFreeError = DateTime.now();
         }
         return false;
@@ -604,6 +603,17 @@ class CameraScreen extends ConsumerWidget {
         )
       )
     );
+  }
+
+  /// 1:00:00
+  /// Time from start to stop
+  String recordingTimeString() {
+    String s = '';
+    if(_startTime!=null) {
+      Duration dur = DateTime.now().difference(_startTime!);
+      s = dur2str(dur);
+    }
+    return s;
   }
 
   /// 01:00:00
@@ -701,10 +711,8 @@ class ScreenSaver extends ConsumerWidget {
         if (DateTime.now().difference(_waitTime!).inSeconds > 5) {
           _waitTime = null;
         }
-        if (_startTime != null) {
-          if (this._ref != null) {
-            _ref!.read(screenSaverProvider).notifyListeners();
-          }
+        if (this._ref != null) {
+          _ref!.read(screenSaverProvider).notifyListeners();
         }
       }
     } on Exception catch (e) {
