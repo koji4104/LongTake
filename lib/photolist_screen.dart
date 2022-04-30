@@ -10,6 +10,7 @@ import 'provider.dart';
 import 'package:video_thumbnail/video_thumbnail.dart' as video_thumbnail;
 import 'model.dart';
 import 'package:flutter_video_info/flutter_video_info.dart';
+import 'localizations.dart';
 
 class PhotoListScreen extends ConsumerWidget {
   PhotoListScreen(){}
@@ -43,7 +44,7 @@ class PhotoListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(l10n("photolist_title")),
         backgroundColor:Color(0xFF000000),
         actions: <Widget>[
           IconButton(
@@ -257,6 +258,10 @@ class PhotoListScreen extends ConsumerWidget {
         );
       }
     );
+  }
+
+  String l10n(String text){
+    return Localized.of(context!).text(text);
   }
 }
 

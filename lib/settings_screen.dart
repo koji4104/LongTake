@@ -69,14 +69,6 @@ class Environment {
     desc:'image_interval_sec_desc',
     pref:'image_interval_sec',
   );
-  EnvData max_size_gb = EnvData(
-    val:10,
-    vals:[1,10,100],
-    keys:['1','10','100'],
-    name:'max_size_gb',
-    desc:'max_size_gb_desc',
-    pref:'max_size_gb',
-  );
   EnvData autostop_sec = EnvData(
     val:3600,
     vals:[60,3600,21600,43200,86400],
@@ -84,6 +76,14 @@ class Environment {
     name:'autostop_sec',
     desc:'autostop_sec_desc',
     pref:'autostop_sec',
+  );
+  EnvData max_size_gb = EnvData(
+    val:10,
+    vals:[1,10,100],
+    keys:['1','10','100'],
+    name:'max_size_gb',
+    desc:'max_size_gb_desc',
+    pref:'max_size_gb',
   );
   EnvData camera_height = EnvData(
     val:480,
@@ -165,8 +165,8 @@ class SettingsScreen extends ConsumerWidget {
               MyValue(data: env.recording_mode),
               MyValue(data: env.video_interval_sec),
               MyValue(data: env.image_interval_sec),
-              MyValue(data: env.max_size_gb),
               MyValue(data: env.autostop_sec),
+              MyValue(data: env.max_size_gb),
               MyValue(data: env.camera_height),
 
               MyText(Localized.of(context).text("precautions")),
