@@ -105,7 +105,7 @@ class Environment {
       autostop_sec.set(prefs.getInt('autostop_sec') ?? 3600);
       camera_height.set(prefs.getInt('camera_height') ?? 480);
     } on Exception catch (e) {
-      print('-- e=' + e.toString());
+      print('-- load() e=' + e.toString());
     }
   }
 
@@ -129,7 +129,7 @@ class SettingsScreen extends ConsumerWidget {
     try {
       await env.load();
     } on Exception catch (e) {
-      print('-- e=' + e.toString());
+      print('-- SettingsScreen init e=' + e.toString());
     }
     return true;
   }

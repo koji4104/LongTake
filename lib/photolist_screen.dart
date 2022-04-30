@@ -116,6 +116,8 @@ class PhotoListScreen extends ConsumerWidget {
         List<FileSystemEntity> _files = photodir.listSync(recursive:true, followLinks:false);
         _files.sort((a,b) { return b.path.compareTo(a.path); });
 
+        print('-- photolist readFiles() _files.length=${_files.length}');
+
         final _thumbdir = Directory('${appdir.path}/thumb');
         await Directory('${appdir.path}/thumb').create(recursive: true);
         List<FileSystemEntity> _entities = _thumbdir.listSync(recursive:true, followLinks:false);
@@ -128,7 +130,12 @@ class PhotoListScreen extends ConsumerWidget {
         for (FileSystemEntity file in _files) {
           PhotoData d = new PhotoData(file.path);
           if(d.path.substring(d.path.length-4,d.path.length)=='.mp4') {
+            if(File(file.path).exists()==false){
+              print('-- photolist readFiles() not found=${file.path}');
+              continue;
+            }
             d.thumb = thumbDir + basenameWithoutExtension(file.path) + ".jpg";
+            //print('-- photolist d.thumb=${d.thumb}');
             if (await File(d.thumb).exists() == false) {
               String? s = await video_thumbnail.VideoThumbnail.thumbnailFile(
                 video: file.path,
@@ -176,7 +183,7 @@ class PhotoListScreen extends ConsumerWidget {
       ref.read(photoListProvider).notifyListeners();
 
     } on Exception catch (e) {
-      print('-- e=' + e.toString());
+      print('-- readFiles() e=' + e.toString());
     }
     return true;
   }

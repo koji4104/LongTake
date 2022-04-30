@@ -340,7 +340,7 @@ class CameraScreen extends ConsumerWidget {
       await Future.delayed(Duration(milliseconds:100));
       await _deleteCacheDir();
     } on Exception catch (e) {
-      print('-- Exception ' + e.toString());
+      print('-- onStop() Exception ' + e.toString());
     }
   }
 
@@ -372,6 +372,8 @@ class CameraScreen extends ConsumerWidget {
         await MyLog.warn(e.description!);
       showSnackBar('${e.code}\n${e.description}');
       //_showCameraException(e);
+    } on Exception catch (e) {
+      print('-- stopRecording() e=${e.toString()}');
     }
   }
 
@@ -405,11 +407,13 @@ class CameraScreen extends ConsumerWidget {
         quality: 70);
       File(xfile.path).delete();
     } on Exception catch (e) {
-      print('-- Exception ' + e.toString());
+      print('-- photoShooting() Exception ' + e.toString());
     }
     _recordTime = dt;
   }
 
+  //src=/var/mobile/Containers/Data/Application/F168A64A-F632-469D-8CD6-390371BE4FAF/Documents/camera/videos/REC_E8ED36E1-3966-43A1-AB34-AA8AD34CEA08.mp4
+  //dst=/var/mobile/Containers/Data/Application/F168A64A-F632-469D-8CD6-390371BE4FAF/Documents/photo/2022-0430-210906.mp4
   Future<File> moveFile(File sourceFile, String newPath) async {
     try {
       if(sourceFile.exists()==false) {
@@ -420,6 +424,8 @@ class CameraScreen extends ConsumerWidget {
         print('-- moveFile not exists');
         await Future.delayed(Duration(milliseconds:100));
       }
+      print('-- moveFile src=${sourceFile.path}');
+      print('-- moveFile dst=${newPath}');
       return await sourceFile.rename(newPath);
     } on FileSystemException catch (e) {
       print('-- moveFile e=${e.message} ${e.path}');
@@ -539,7 +545,7 @@ class CameraScreen extends ConsumerWidget {
         return false;
       }
     } on Exception catch (e) {
-      print('-- Exception ' + e.toString());
+      print('-- checkDiskFree() Exception ' + e.toString());
     }
     return true;
   }
@@ -562,9 +568,13 @@ class CameraScreen extends ConsumerWidget {
 
   /// Delete the garbage data of the picture.
   Future<void> _deleteCacheDir() async {
-    final cacheDir = await getTemporaryDirectory();
-    if (cacheDir.existsSync()) {
-      cacheDir.deleteSync(recursive: true);
+    try{
+      final cacheDir = await getTemporaryDirectory();
+      if (cacheDir.existsSync()) {
+        cacheDir.deleteSync(recursive: true);
+      }
+    } on Exception catch (e) {
+      print('-- _deleteCacheDir() Exception ' + e.toString());
     }
   }
 
@@ -720,7 +730,7 @@ class ScreenSaver extends ConsumerWidget {
         }
       }
     } on Exception catch (e) {
-      print('-- Exception '+e.toString());
+      print('-- ScreenSaver _onTimer() Exception '+e.toString());
     }
   }
 
