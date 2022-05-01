@@ -135,16 +135,23 @@ class PhotoListScreen extends ConsumerWidget {
               continue;
             }
             d.thumb = thumbDir + basenameWithoutExtension(file.path) + ".jpg";
-            //print('-- photolist d.thumb=${d.thumb}');
+
             if (await File(d.thumb).exists() == false) {
-              String? s = await video_thumbnail.VideoThumbnail.thumbnailFile(
-                video: file.path,
-                thumbnailPath: d.thumb,
-                imageFormat: video_thumbnail.ImageFormat.JPEG,
-                maxHeight: 240,
-                quality: 70);
-              d.thumb = (s != null) ? s : "";
+              print('-- photolist d.path=${d.path}');
+              print('-- photolist d.thumb=${d.thumb}');
+              try{
+                String? s = await video_thumbnail.VideoThumbnail.thumbnailFile(
+                  video: file.path,
+                  thumbnailPath: d.thumb,
+                  imageFormat: video_thumbnail.ImageFormat.JPEG,
+                  maxHeight: 240,
+                  quality: 70);
+                d.thumb = (s != null) ? s : "";
+              } on Exception catch (e) {
+                print('-- err thumbnail');
+              }
             }
+
             if (_thumbs.indexOf(d.thumb) >= 0)
               _thumbs.removeAt(_thumbs.indexOf(d.thumb));
 
@@ -160,7 +167,7 @@ class PhotoListScreen extends ConsumerWidget {
           d.date = file.statSync().modified;
           d.byte = await File(d.path).length();
           dataList.add(d);
-        }
+        } // for
 
         // delete unused thumbnail
         for (String u1 in _thumbs) {
@@ -353,6 +360,7 @@ class PreviewScreen extends ConsumerWidget {
   }
   PhotoData data = PhotoData('');
   VideoPlayerController? _controller;
+
   bool _init = false;
 
   void init(BuildContext context, WidgetRef ref){
@@ -360,15 +368,16 @@ class PreviewScreen extends ConsumerWidget {
       try{
         if(data.path.contains('.mp4')){
           print('-- init mp4');
+
           _controller = VideoPlayerController.file(File(data.path));
           if(_controller!=null) {
             _controller!.initialize().then((_) {
               ref.read(previewScreenProvider).notifyListeners();
-              print('-- notifyListeners');
             });
           } else {
             print('-- _controller is null');
           }
+
         }
       } on Exception catch (e) {
         print('-- PreviewScreen.init ${e.toString()}');

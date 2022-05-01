@@ -115,23 +115,21 @@ class CameraScreen extends ConsumerWidget {
         NativeDeviceOrientationReader(
           useSensor: true,
           builder: (context) {
-            if(_controller!=null && this._isRecording==false) {
+
+            if(false && _controller!=null && this._isRecording==false) {
               DeviceOrientation ori = DeviceOrientation.portraitUp;
               double ang = 0;
 
               // Video recording upside down.
               switch (NativeDeviceOrientationReader.orientation(context)) {
                 case NativeDeviceOrientation.landscapeRight:
-                  //ori = DeviceOrientation.landscapeLeft;
-                  //ang = pi;
-                  ori = DeviceOrientation.landscapeRight;
-                  ang = 0;
+                  ori = DeviceOrientation.landscapeLeft;
+                  ang = pi;
+                  print('-- landscapeRight rec upside down');
                   break;
                 case NativeDeviceOrientation.landscapeLeft:
-                  //ori = DeviceOrientation.landscapeRight;
-                  //ang = pi;
-                  ori = DeviceOrientation.landscapeLeft;
-                  ang = 0;
+                  ori = DeviceOrientation.landscapeRight;
+                  ang = pi;
                   break;
                 case NativeDeviceOrientation.portraitDown:
                   ori = DeviceOrientation.portraitDown;
