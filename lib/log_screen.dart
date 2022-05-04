@@ -174,16 +174,28 @@ class LogScreen extends ConsumerWidget {
       spans.add(TextSpan(text:' '+d.msg+'\n'));
     }
 
+    double leftPdd = 8;
+    double rightPdd = 8;
+    double w = MediaQuery.of(context).size.width;
+    if(w>700) {
+      leftPdd = 200;
+      rightPdd = 12;
+    }
+
     return Container(
+      width: MediaQuery.of(context).size.width-leftPdd-20,
       height: MediaQuery.of(context).size.height-120,
-      color: Colors.black54,
-      margin: EdgeInsets.symmetric(vertical:20, horizontal:10),
+        decoration: BoxDecoration(
+          color: Color(0xFF333333),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      margin: EdgeInsets.fromLTRB(leftPdd,8,rightPdd,8),
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,
-        padding: EdgeInsets.fromLTRB(4,4,4,4),
+          padding: EdgeInsets.fromLTRB(8,8,8,8),
         child: SelectableText.rich(
           TextSpan(
-            style: TextStyle(fontSize:13, fontFamily:'monospace'),
+            style: TextStyle(fontSize:14, fontFamily:'monospace'),
             children: spans
           )
         )

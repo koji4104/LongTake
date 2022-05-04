@@ -142,10 +142,13 @@ class SettingsScreen extends ConsumerWidget {
     _ref = ref;
     ref.watch(SettingsScreenProvider);
 
-    double leftPadding = 8;
+    double leftPdd = 8;
+    double rightPdd = 8;
     double w = MediaQuery.of(context).size.width;
-    if(w>700)
-      leftPadding = 200;
+    if(w>700) {
+      leftPdd = 200;
+      rightPdd = 12;
+    }
 
     return WillPopScope(
       onWillPop: () async {
@@ -165,7 +168,7 @@ class SettingsScreen extends ConsumerWidget {
             return SingleChildScrollView();
 
           return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(leftPadding,8,8,8),
+            padding: EdgeInsets.fromLTRB(leftPdd,8,rightPdd,8),
             child: Column(children: [
               MyValue(data: env.recording_mode),
               MyValue(data: env.video_interval_sec),

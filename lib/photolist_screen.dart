@@ -64,7 +64,7 @@ class PhotoListScreen extends ConsumerWidget {
       ),
       body: Stack(children: <Widget>[
       Container(
-      margin: EdgeInsets.symmetric(vertical:4, horizontal:10),
+      margin: EdgeInsets.symmetric(vertical:4, horizontal:12),
           child:Row(mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Icon(Icons.image, size: 12.0, color: Colors.white),
