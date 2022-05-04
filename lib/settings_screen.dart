@@ -142,6 +142,11 @@ class SettingsScreen extends ConsumerWidget {
     _ref = ref;
     ref.watch(SettingsScreenProvider);
 
+    double leftPadding = 8;
+    double w = MediaQuery.of(context).size.width;
+    if(w>700)
+      leftPadding = 200;
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(true);
@@ -160,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
             return SingleChildScrollView();
 
           return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.fromLTRB(leftPadding,8,8,8),
             child: Column(children: [
               MyValue(data: env.recording_mode),
               MyValue(data: env.video_interval_sec),
@@ -261,6 +266,11 @@ class RadioListScreen extends ConsumerWidget {
     this.context = context;
     this.ref = ref;
 
+    double leftPadding = 8;
+    double w = MediaQuery.of(context).size.width;
+    if(w>700)
+      leftPadding = 200;
+
     return WillPopScope(
       onWillPop:() async {
         Navigator.of(context).pop(selected);
@@ -269,7 +279,7 @@ class RadioListScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(l10n(data.name)), backgroundColor:Color(0xFF000000),),
         body: Container(
-          margin:EdgeInsets.only(top:12, left:4, right:4),
+          padding: EdgeInsets.fromLTRB(leftPadding,12,8,8),
           child:getListView()
         ),
       )

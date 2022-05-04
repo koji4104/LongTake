@@ -208,7 +208,8 @@ class CameraScreen extends ConsumerWidget {
               }
             }
           ),
-      ]),
+        ]
+      ),
     );
   }
 

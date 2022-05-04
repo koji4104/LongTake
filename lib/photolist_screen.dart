@@ -12,6 +12,7 @@ import 'model.dart';
 import 'package:flutter_video_info/flutter_video_info.dart';
 import 'localizations.dart';
 import 'package:video_player/video_player.dart';
+import 'dart:math';
 
 class PhotoListScreen extends ConsumerWidget {
   PhotoListScreen(){}
@@ -85,10 +86,17 @@ class PhotoListScreen extends ConsumerWidget {
   }
 
   Widget getListView(BuildContext context, WidgetRef ref) {
-    return Container(
+    int crossAxisCount = 3;
+    double w = MediaQuery.of(context).size.width;
+    if(w>800)
+      crossAxisCount = 5;
+    else if(w>600)
+      crossAxisCount = 4;
+
+      return Container(
       padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       child: GridView.count(
-        crossAxisCount: 3,
+        crossAxisCount: crossAxisCount,
         children: List.generate(dataList.length, (index) {
           return MyCard(data: dataList[index]);
         })),
@@ -105,7 +113,7 @@ class PhotoListScreen extends ConsumerWidget {
           int h = (i / 10).toInt();
           int m = (i % 10).toInt();
           d.date = DateTime(2022, 1, 1, h, m, 0);
-          d.path = '.mp4';
+          d.path = 'aaa.mp4';
           d.playtime = i*1800;
           dataList.add(d);
         }
@@ -360,15 +368,17 @@ class PreviewScreen extends ConsumerWidget {
   }
   PhotoData data = PhotoData('');
   VideoPlayerController? _controller;
-
+  VideoData? _videoInfo;
+  WidgetRef? _ref;
+  Image? _img;
   bool _init = false;
 
-  void init(BuildContext context, WidgetRef ref){
+  void init(BuildContext context, WidgetRef ref) async {
     if(_init == false){
       try{
         if(data.path.contains('.mp4')){
           print('-- init mp4');
-
+          _videoInfo = await FlutterVideoInfo().getVideoInfo(data.path);
           _controller = VideoPlayerController.file(File(data.path));
           if(_controller!=null) {
             _controller!.initialize().then((_) {
@@ -378,6 +388,8 @@ class PreviewScreen extends ConsumerWidget {
             print('-- _controller is null');
           }
 
+        } else if(data.path.contains('.jpg')){
+          _img = Image.file(File(data.path), fit:BoxFit.contain);
         }
       } on Exception catch (e) {
         print('-- PreviewScreen.init ${e.toString()}');
@@ -390,6 +402,7 @@ class PreviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref){
     Future.delayed(Duration.zero, () => init(context,ref));
     ref.watch(previewScreenProvider);
+    this._ref = ref;
 
     return Scaffold(
       appBar: AppBar(
@@ -400,9 +413,13 @@ class PreviewScreen extends ConsumerWidget {
         margin: EdgeInsets.all(10),
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          child: player(),
           onTap:(){
+            Navigator.of(context).pop();
           },
+          child: Stack(children: <Widget>[
+            player(),
+            getInfoText(),
+          ])
         ),
     ));
   }
@@ -415,19 +432,32 @@ class PreviewScreen extends ConsumerWidget {
       if(_controller==null || _controller!.value.isInitialized==false){
         return Container();
       } else {
+        double _previewAngle=0;
+        if(_videoInfo!=null && Platform.isAndroid){
+          if(_videoInfo!.orientation==180){
+            _previewAngle=pi;
+          }
+        }
+
         return Stack(children: <Widget>[
-          Center(child:AspectRatio(
-            aspectRatio: _controller!.value.aspectRatio,
-            child: VideoPlayer(_controller!),
-          )),
+          Center(
+            child: Transform.rotate(
+            angle: _previewAngle,
+              child:AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              ))),
+
           Center(child:CircleAvatar(
             backgroundColor: Colors.black54,
-            radius: 28.0,
+            radius: 38.0,
             child: IconButton(
               icon:Icon(_controller!.value.isPlaying ? Icons.pause : Icons.play_arrow),
-              iconSize: 38.0,
+              iconSize: 48.0,
               onPressed:(){
                 _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+                if(_ref!=null)
+                  _ref!.read(previewScreenProvider).notifyListeners();
               }
             ),
           )),
@@ -435,11 +465,56 @@ class PreviewScreen extends ConsumerWidget {
       }
 
     } else if(data.path.contains('.jpg')){
-      return Center(child:Image.file(File(data.path), fit:BoxFit.contain));
+      if(_img!=null)
+        return Container();
+      else
+        return Center(child:_img);
 
     } else {
       return Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain));
 
+    }
+  }
+
+  Widget getInfoText(){
+    if(data.path.contains('.mp4')) {
+      if(_videoInfo==null){
+        return Container();
+      } else {
+        return Container(
+            color: Colors.black45,
+            child: Row(mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text('${_videoInfo!.width}x${_videoInfo!.height}'),
+              SizedBox(width: 8),
+              Text('ori=${_videoInfo!.orientation}'),
+              SizedBox(width: 8),
+              Text('dur=${_videoInfo!.duration}'),
+              SizedBox(width: 8),
+              Text('sz=${data.byte/1024} KB'),
+              SizedBox(width: 8),
+              Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
+            ]
+          )
+        );
+      }
+    } else if(data.path.contains('.jpg')) {
+      if(_img==null){
+        return Container();
+      } else {
+        return Row(mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text('${_img!.width}x${_img!.height}'),
+              SizedBox(width: 8),
+              Text('sz=${data.byte/1024} KB'),
+              SizedBox(width: 8),
+              Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
+            ]
+        );
+      }
+
+    } else {
+      return Container();
     }
   }
 }
