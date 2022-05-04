@@ -448,13 +448,15 @@ class PreviewScreen extends ConsumerWidget {
                 child: VideoPlayer(_controller!),
               ))),
 
-          Center(child:CircleAvatar(
+          Center(
+            child:CircleAvatar(
             backgroundColor: Colors.black54,
-            radius: 38.0,
+            radius: 40.0,
             child: IconButton(
               icon:Icon(_controller!.value.isPlaying ? Icons.pause : Icons.play_arrow),
-              iconSize: 48.0,
+              iconSize: 42.0,
               onPressed:(){
+                print('-- onPressed');
                 _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
                 if(_ref!=null)
                   _ref!.read(previewScreenProvider).notifyListeners();
@@ -482,21 +484,21 @@ class PreviewScreen extends ConsumerWidget {
         return Container();
       } else {
         return Container(
-          color: Colors.black45,
-          child: Column(children: [
-            Row(children: [
-              Text(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
-            ]),
-            Row(children: [
-              Text('${_videoInfo!.width}x${_videoInfo!.height}'),
-              SizedBox(width: 8),
-              Text('${(_videoInfo!.duration!/1000).toInt()} sec'),
-              SizedBox(width: 8),
-              Text('${(data.byte/1024).toInt()} KB'),
-              SizedBox(width: 8),
-              Text('angle ${_videoInfo!.orientation}'),
-            ])
-          ])
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          width:180, height:100,
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              getText(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
+              getText('${_videoInfo!.width}x${_videoInfo!.height}'),
+              getText('${(_videoInfo!.duration!/1000).toInt()} sec'),
+              getText('${(data.byte/1024).toInt()} kb'),
+              getText('rotate ${(_videoInfo!.orientation!).toInt()}'),
+           ])
         );
       }
     } else if(data.path.contains('.jpg')) {
@@ -504,18 +506,24 @@ class PreviewScreen extends ConsumerWidget {
         return Container();
       } else {
         return Row(mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Text('${_img!.width}x${_img!.height}'),
-              SizedBox(width: 8),
-              Text('sz=${data.byte/1024} KB'),
-              SizedBox(width: 8),
-              Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
-            ]
+          children: [
+            Text('${_img!.width}x${_img!.height}'),
+            SizedBox(width: 8),
+            Text('sz=${data.byte/1024} KB'),
+            SizedBox(width: 8),
+            Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
+          ]
         );
       }
 
     } else {
       return Container();
     }
+  }
+
+  Widget getText(String txt){
+    return Align(alignment:Alignment.centerLeft,
+      child:Text(txt),
+    );
   }
 }
