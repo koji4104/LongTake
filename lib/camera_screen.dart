@@ -99,11 +99,12 @@ class CameraScreen extends ConsumerWidget {
     this._isScreensaver = ref.watch(isScreenSaverProvider);
     this._isRecording = ref.watch(isRecordingProvider);
 
+    //SystemChrome.setEnabledSystemUIMode(SystemUiMode.leanBack, overlays: []);
     if(_isScreensaver) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays:[]);
       Wakelock.enable();
     } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: []);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays:[]);
       Wakelock.disable();
     }
 

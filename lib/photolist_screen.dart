@@ -482,20 +482,21 @@ class PreviewScreen extends ConsumerWidget {
         return Container();
       } else {
         return Container(
-            color: Colors.black45,
-            child: Row(mainAxisAlignment: MainAxisAlignment.start,
-            children: [
+          color: Colors.black45,
+          child: Column(children: [
+            Row(children: [
+              Text(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
+            ]),
+            Row(children: [
               Text('${_videoInfo!.width}x${_videoInfo!.height}'),
               SizedBox(width: 8),
-              Text('ori=${_videoInfo!.orientation}'),
+              Text('${(_videoInfo!.duration!/1000).toInt()} sec'),
               SizedBox(width: 8),
-              Text('dur=${_videoInfo!.duration}'),
+              Text('${(data.byte/1024).toInt()} KB'),
               SizedBox(width: 8),
-              Text('sz=${data.byte/1024} KB'),
-              SizedBox(width: 8),
-              Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
-            ]
-          )
+              Text('angle ${_videoInfo!.orientation}'),
+            ])
+          ])
         );
       }
     } else if(data.path.contains('.jpg')) {
