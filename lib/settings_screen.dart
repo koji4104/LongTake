@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'localizations.dart';
 import 'log_screen.dart';
+import 'common.dart';
 
 class EnvData {
   int val;
@@ -116,10 +117,7 @@ class Environment {
   }
 }
 
-final SettingsScreenProvider = ChangeNotifierProvider((ref) => SettingsScreenNotifier(ref));
-class SettingsScreenNotifier extends ChangeNotifier {
-  SettingsScreenNotifier(ref){}
-}
+final settingsScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
 class SettingsScreen extends ConsumerWidget {
   SettingsScreen(){}
@@ -136,19 +134,15 @@ class SettingsScreen extends ConsumerWidget {
 
   BuildContext? _context;
   WidgetRef? _ref;
+  MyEdge _edge = MyEdge(provider:settingsScreenProvider);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     _context = context;
     _ref = ref;
-    ref.watch(SettingsScreenProvider);
+    ref.watch(settingsScreenProvider);
 
-    double leftPdd = 8;
-    double rightPdd = 8;
-    double w = MediaQuery.of(context).size.width;
-    if(w>700) {
-      leftPdd = 200;
-      rightPdd = 12;
-    }
+    _edge.getEdge(context,ref);
 
     return WillPopScope(
       onWillPop: () async {
@@ -161,37 +155,49 @@ class SettingsScreen extends ConsumerWidget {
           backgroundColor:Color(0xFF000000),
           actions: <Widget>[],
         ),
-        body:FutureBuilder(
-          future: load(),
-          builder: (context, snapshot) {
-          if(snapshot.hasData == false)
-            return SingleChildScrollView();
-
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(leftPdd,8,rightPdd,8),
-            child: Column(children: [
-              MyValue(data: env.recording_mode),
-              MyValue(data: env.video_interval_sec),
-              MyValue(data: env.image_interval_sec),
-              MyValue(data: env.autostop_sec),
-              MyValue(data: env.max_size_gb),
-              MyValue(data: env.camera_height),
-
-              MyText(Localized.of(context).text("precautions")),
-
-              MyListTile(
-                title:Text('Log'),
-                onTap:(){
-                  Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => LogScreen(),
-                  ));
-                }
-              ),
-            ]));
-        })
+        body: Container(
+          margin: _edge.settingsEdge,
+          child: Stack(children: <Widget>[
+            getList(context),
+          ])
+        )
       )
     );
+  }
+
+  Widget getList(BuildContext context) {
+    return FutureBuilder(
+      future: load(),
+      builder: (context, snapshot) {
+        if(snapshot.hasData == false)
+          return SingleChildScrollView();
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(8,8,8,8),
+          child: Column(children: [
+            MyValue(data: env.recording_mode),
+            MyValue(data: env.video_interval_sec),
+            MyValue(data: env.image_interval_sec),
+            MyValue(data: env.autostop_sec),
+            MyValue(data: env.max_size_gb),
+            MyValue(data: env.camera_height),
+
+            MyText(Localized.of(context).text("precautions")),
+
+            MyListTile(
+              title:Text('Logs'),
+              onTap:(){
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LogScreen(),
+                    )
+                  );
+                }
+              ),
+            ]
+          )
+        );
+      }
+   );
   }
 
   Widget MyText(String label) {
@@ -237,7 +243,7 @@ class SettingsScreen extends ConsumerWidget {
             if (data.val != ret) {
               data.set(ret);
               env.save(data);
-              _ref!.read(SettingsScreenProvider).notifyListeners();
+              _ref!.read(settingsScreenProvider).notifyListeners();
             }
           }
         );

@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'photolist_screen.dart';
 import 'settings_screen.dart';
 import 'package:flutter/services.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
+
 import 'dart:math';
 import 'package:wakelock/wakelock.dart';
 
@@ -18,11 +18,14 @@ import 'provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'log_screen.dart';
 import 'package:video_thumbnail/video_thumbnail.dart' as video_thumbnail;
+import 'common.dart';
 
 bool disableCamera = kIsWeb; // true=test
 final bool _testMode = false;
 
 const Color COL_SS_TEXT = Color(0xFFbbbbbb);
+
+final cameraScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
 class CameraScreen extends ConsumerWidget {
   CameraController? _controller;
@@ -51,6 +54,7 @@ class CameraScreen extends ConsumerWidget {
 
   DeviceOrientation _orientation = DeviceOrientation.portraitUp;
   double _previewAngle = 0.0;
+  MyEdge _edge = MyEdge(provider:cameraScreenProvider);
 
   void init(BuildContext context, WidgetRef ref) {
     if(_timer == null)
@@ -95,6 +99,7 @@ class CameraScreen extends ConsumerWidget {
     this._context = context;
     Future.delayed(Duration.zero, () => init(context,ref));
     ref.watch(redrawProvider);
+    ref.watch(cameraScreenProvider);
 
     this._isScreensaver = ref.watch(isScreenSaverProvider);
     this._isRecording = ref.watch(isRecordingProvider);
@@ -108,47 +113,14 @@ class CameraScreen extends ConsumerWidget {
       Wakelock.disable();
     }
 
+    _edge.getEdge(context,ref);
+
     return Scaffold(
       key: _scaffoldKey,
       extendBody: true,
-      body: Stack(children: <Widget>[
-
-        NativeDeviceOrientationReader(
-          useSensor: true,
-          builder: (context) {
-
-            if(false && _controller!=null && this._isRecording==false) {
-              DeviceOrientation ori = DeviceOrientation.portraitUp;
-              double ang = 0;
-
-              // Video recording upside down.
-              switch (NativeDeviceOrientationReader.orientation(context)) {
-                case NativeDeviceOrientation.landscapeRight:
-                  ori = DeviceOrientation.landscapeLeft;
-                  ang = pi;
-                  print('-- landscapeRight rec upside down');
-                  break;
-                case NativeDeviceOrientation.landscapeLeft:
-                  ori = DeviceOrientation.landscapeRight;
-                  ang = pi;
-                  break;
-                case NativeDeviceOrientation.portraitDown:
-                  ori = DeviceOrientation.portraitDown;
-                  ang = 0;
-                  break;
-                default:
-                  break;
-              }
-              if(this._orientation != ori) {
-                _orientation = ori;
-                _previewAngle = ang;
-                if(_controller!=null)
-                  _controller!.lockCaptureOrientation(_orientation);
-              }
-            }
-            return Container();
-          }
-        ),
+      body: Container(
+        margin: _edge.homebarEdge,
+        child: Stack(children: <Widget>[
 
         // screen saver
         if (_isScreensaver)
@@ -172,7 +144,7 @@ class CameraScreen extends ConsumerWidget {
         // Camera Switch button
         if(_isScreensaver==false)
           MyButton(
-            bottom: 60.0, right: 60.0,
+            bottom: 30.0, right: 30.0,
             icon: Icon(Icons.flip_camera_ios, color: Colors.white),
             onPressed:() => _onCameraSwitch(ref),
           ),
@@ -180,7 +152,7 @@ class CameraScreen extends ConsumerWidget {
         // PhotoList screen button
         if(_isScreensaver==false)
           MyButton(
-            top: 60.0, left: 60.0,
+            top: 50.0, left: 30.0,
             icon: Icon(Icons.folder, color: Colors.white),
             onPressed: () {
               Navigator.of(context).push(
@@ -193,7 +165,7 @@ class CameraScreen extends ConsumerWidget {
         // Settings screen button
         if(_isScreensaver==false)
           MyButton(
-            top: 60.0, right: 60.0,
+            top: 50.0, right: 30.0,
             icon: Icon(Icons.settings, color:Colors.white),
             onPressed:() async {
               await Navigator.of(context).push(
@@ -211,7 +183,7 @@ class CameraScreen extends ConsumerWidget {
           ),
         ]
       ),
-    );
+    ));
   }
 
   /// Camera

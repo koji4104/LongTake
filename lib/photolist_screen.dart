@@ -13,6 +13,9 @@ import 'package:flutter_video_info/flutter_video_info.dart';
 import 'localizations.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:math';
+import 'common.dart';
+
+final photoListScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
 class PhotoListScreen extends ConsumerWidget {
   PhotoListScreen(){}
@@ -25,6 +28,7 @@ class PhotoListScreen extends ConsumerWidget {
   int selectedIndex = 0;
   BuildContext? context;
   WidgetRef? ref;
+  MyEdge _edge = MyEdge(provider:photoListScreenProvider);
 
   void init(BuildContext context, WidgetRef ref) {
     if(_init == false){
@@ -41,6 +45,9 @@ class PhotoListScreen extends ConsumerWidget {
     int size = ref.watch(photoListProvider).size;
     int sizemb = (size/1024/1024).toInt();
     //print('-- num=${num}');
+
+    ref.watch(photoListScreenProvider);
+    _edge.getEdge(context,ref);
 
     Future.delayed(Duration.zero, () => init(context,ref));
 
@@ -62,27 +69,33 @@ class PhotoListScreen extends ConsumerWidget {
           SizedBox(width: 10),
         ],
       ),
-      body: Stack(children: <Widget>[
-      Container(
-      margin: EdgeInsets.symmetric(vertical:4, horizontal:12),
-          child:Row(mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Icon(Icons.image, size: 12.0, color: Colors.white),
-            SizedBox(width: 4),
-            Text(num.toString()),
-            SizedBox(width: 8),
-            Icon(Icons.folder, size: 12.0, color: Colors.white),
-            SizedBox(width: 4),
-            Text(sizemb.toString() + ' MB'),
-          ]
-        )
-      ),
-      Container(
-        margin: EdgeInsets.only(top:24),
-        child:getListView(context,ref),
-        )
-      ])
-    );
+      body:
+        Container(
+        margin: _edge.homebarEdge,
+        child:
+        Stack(children: <Widget>[
+
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Icon(Icons.image, size: 12.0, color: Colors.white),
+              SizedBox(width: 4),
+              Text(num.toString()),
+              SizedBox(width: 8),
+              Icon(Icons.folder, size: 12.0, color: Colors.white),
+              SizedBox(width: 4),
+              Text(sizemb.toString() + ' MB'),
+            ]
+          )
+        ),
+        Container(
+          margin: EdgeInsets.only(top:24),
+          child:getListView(context,ref),
+          )
+        ])
+    ));
   }
 
   Widget getListView(BuildContext context, WidgetRef ref) {
@@ -94,7 +107,7 @@ class PhotoListScreen extends ConsumerWidget {
       crossAxisCount = 4;
 
       return Container(
-      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 6),
       child: GridView.count(
         crossAxisCount: crossAxisCount,
         children: List.generate(dataList.length, (index) {
