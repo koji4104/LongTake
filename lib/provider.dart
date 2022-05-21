@@ -1,29 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'model.dart';
-import 'settings_screen.dart';
-
-final redrawProvider = ChangeNotifierProvider((ref) => redrawNotifier(ref));
-class redrawNotifier extends ChangeNotifier {
-  redrawNotifier(ref){}
-}
+import 'common.dart';
 
 final selectedListProvider = ChangeNotifierProvider((ref) => selectedListNotifier(ref));
 class selectedListNotifier extends ChangeNotifier {
-  List<PhotoData> list = [];
+  List<MyFile> list = [];
   selectedListNotifier(ref){}
 
-  select(PhotoData data) {
-    if(list.contains(data)) {
-      list.remove(data);
+  select(MyFile f) {
+    if(list.contains(f)) {
+      list.remove(f);
     } else {
-      list.add(data);
+      list.add(f);
     }
     this.notifyListeners();
   }
 
-  bool contains(PhotoData data) {
-    return list.contains(data);
+  bool contains(MyFile f) {
+    return list.contains(f);
   }
 
   clear() {

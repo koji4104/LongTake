@@ -26,6 +26,7 @@ class EnvData {
     set(val);
   }
 
+  // 選択肢と同じものがなければひとつ大きいいものになる
   set(int? newval) {
     if (newval==null)
       return;
@@ -94,20 +95,33 @@ class Environment {
     desc:'camera_height_desc',
     pref:'camera_height',
   );
+  // 0=back, 1=Front(Face)
+  EnvData camera_pos = EnvData(
+    val:0,
+    vals:[0,1],
+    keys:['back','front'],
+    name:'camera_pos',
+    desc:'camera_pos_desc',
+    pref:'camera_pos',
+  );
 
   load() async {
     if(kIsWeb) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      recording_mode.set(prefs.getInt('recording_mode') ?? 1);
-      video_interval_sec.set(prefs.getInt('video_interval_sec') ?? 3600);
-      image_interval_sec.set(prefs.getInt('image_interval_sec') ?? 60);
-      max_size_gb.set(prefs.getInt('max_size_gb') ?? 10);
-      autostop_sec.set(prefs.getInt('autostop_sec') ?? 3600);
-      camera_height.set(prefs.getInt('camera_height') ?? 480);
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      _loadSub(prefs, recording_mode);
+      _loadSub(prefs, video_interval_sec);
+      _loadSub(prefs, image_interval_sec);
+      _loadSub(prefs, max_size_gb);
+      _loadSub(prefs, autostop_sec);
+      _loadSub(prefs, camera_height);
+      _loadSub(prefs, camera_pos);
     } on Exception catch (e) {
       print('-- load() e=' + e.toString());
     }
+  }
+  _loadSub(SharedPreferences prefs, EnvData data) {
+    data.set(prefs.getInt(data.pref) ?? data.val);
   }
 
   save(EnvData data) async {

@@ -14,37 +14,38 @@ import 'localizations.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:math';
 import 'common.dart';
+import 'package:photo_gallery/photo_gallery.dart';
 
 final photoListScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
 class PhotoListScreen extends ConsumerWidget {
   PhotoListScreen(){}
-  
+
   String title='In-app data';
-  List<PhotoData> dataList = [];
+  List<MyFile> fileList = [];
   int numIndex = 20;
 
   bool _init = false;
   int selectedIndex = 0;
-  BuildContext? context;
-  WidgetRef? ref;
+  BuildContext? _context;
+  WidgetRef? _ref;
   MyEdge _edge = MyEdge(provider:photoListScreenProvider);
+  MyStorage _storage = new MyStorage();
 
   void init(BuildContext context, WidgetRef ref) {
     if(_init == false){
-      readFiles(ref);
+      readFiles();
       _init = true;
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    this.context = context;
-    this.ref = ref;
+    this._context = context;
+    this._ref = ref;
     int num = ref.watch(photoListProvider).num;
     int size = ref.watch(photoListProvider).size;
     int sizemb = (size/1024/1024).toInt();
-    //print('-- num=${num}');
 
     ref.watch(photoListScreenProvider);
     _edge.getEdge(context,ref);
@@ -106,39 +107,39 @@ class PhotoListScreen extends ConsumerWidget {
     else if(w>600)
       crossAxisCount = 4;
 
-      return Container(
-      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+    return Container(
+      padding: EdgeInsets.symmetric(vertical:4, horizontal:6),
       child: GridView.count(
         crossAxisCount: crossAxisCount,
-        children: List.generate(dataList.length, (index) {
-          return MyCard(data: dataList[index]);
+        children: List.generate(fileList.length, (index) {
+          return MyCard(data: fileList[index]);
         })),
     );
   }
 
   // /data/user/0/com.example.longtake/app_flutter/photo/2022-0417-170926.mp4
-  Future<bool> readFiles(WidgetRef ref) async {
+  Future<bool> readFiles() async {
     try {
-      dataList.clear();
+      await _storage.getGallery();
+
+      fileList.clear();
+      int totalBytes = 0;
       if (kIsWeb) {
         for (int i = 1; i < 30; i++) {
-          PhotoData d = new PhotoData('');
+          MyFile f = new MyFile();
           int h = (i / 10).toInt();
           int m = (i % 10).toInt();
-          d.date = DateTime(2022, 1, 1, h, m, 0);
-          d.path = 'aaa.mp4';
-          d.playtime = i*1800;
-          dataList.add(d);
+          f.date = DateTime(2022, 1, 1, h, m, 0);
+          f.path = 'aaa.mp4';
+          fileList.add(f);
         }
+
       } else {
+        // ビデオ（画像）リスト
         final Directory appdir = await getApplicationDocumentsDirectory();
-        final photodir = Directory('${appdir.path}/photo');
-        await Directory('${appdir.path}/photo').create(recursive: true);
-        List<FileSystemEntity> _files = photodir.listSync(recursive:true, followLinks:false);
-        _files.sort((a,b) { return b.path.compareTo(a.path); });
+        await _storage.getAppdata();
 
-        print('-- photolist readFiles() _files.length=${_files.length}');
-
+        // サムネイルリスト
         final _thumbdir = Directory('${appdir.path}/thumb');
         await Directory('${appdir.path}/thumb').create(recursive: true);
         List<FileSystemEntity> _entities = _thumbdir.listSync(recursive:true, followLinks:false);
@@ -146,69 +147,31 @@ class PhotoListScreen extends ConsumerWidget {
         for (FileSystemEntity e in _entities) {
           _thumbs.add(e.path);
         }
+        fileList = _storage.files;
 
-        final String thumbDir = '${appdir.path}/thumb/';
-        for (FileSystemEntity file in _files) {
-          PhotoData d = new PhotoData(file.path);
-          if(d.path.substring(d.path.length-4,d.path.length)=='.mp4') {
-            if(File(file.path).exists()==false){
-              print('-- photolist readFiles() not found=${file.path}');
-              continue;
+        for (MyFile f in fileList) {
+          if(f.path.contains('.mp4')) {
+            if (_thumbs.indexOf(f.thumb) >= 0) {
+              _thumbs.removeAt(_thumbs.indexOf(f.thumb));
             }
-            d.thumb = thumbDir + basenameWithoutExtension(file.path) + ".jpg";
-
-            if (await File(d.thumb).exists() == false) {
-              print('-- photolist d.path=${d.path}');
-              print('-- photolist d.thumb=${d.thumb}');
-              try{
-                String? s = await video_thumbnail.VideoThumbnail.thumbnailFile(
-                  video: file.path,
-                  thumbnailPath: d.thumb,
-                  imageFormat: video_thumbnail.ImageFormat.JPEG,
-                  maxHeight: 240,
-                  quality: 70);
-                d.thumb = (s != null) ? s : "";
-              } on Exception catch (e) {
-                print('-- err thumbnail');
-              }
-            }
-
-            if (_thumbs.indexOf(d.thumb) >= 0)
-              _thumbs.removeAt(_thumbs.indexOf(d.thumb));
-
-            VideoData? info = await FlutterVideoInfo().getVideoInfo(d.path);
-            if(info != null && info.duration != null){
-              d.playtime = (info.duration!/1000.0).toInt();
-            }
-
-          } else if(d.path.substring(d.path.length-4,d.path.length)=='.jpg') {
-            d.thumb = d.path;
           }
 
-          d.date = file.statSync().modified;
-          d.byte = await File(d.path).length();
-          dataList.add(d);
-        } // for
+        } // for(files)
 
-        // delete unused thumbnail
+        // 未使用のサムネイルを削除
         for (String u1 in _thumbs) {
           if (await File(u1).exists()) {
             await File(u1).delete();
           }
         }
-      }
+      } // if(kIsWeb) else
 
-      int totalBytes = 0;
-      if (kIsWeb==false) {
-        for (PhotoData d in dataList) {
-          if (await File(d.path).exists())
-            totalBytes += d.byte;
-        }
+      if(_ref!=null) {
+        _ref!.read(photoListProvider).num = fileList.length;
+        _ref!.read(photoListProvider).size = totalBytes;
+        _ref!.read(photoListProvider).notifyListeners();
+        _ref!.read(selectedListProvider).clear();
       }
-
-      ref.read(photoListProvider).num = dataList.length;
-      ref.read(photoListProvider).size = totalBytes;
-      ref.read(photoListProvider).notifyListeners();
 
     } on Exception catch (e) {
       print('-- readFiles() e=' + e.toString());
@@ -217,29 +180,28 @@ class PhotoListScreen extends ConsumerWidget {
   }
 
   /// Save file
-  /// Move to photolibrary
   _saveFileWithDialog(BuildContext context, WidgetRef ref) async {
-    List<PhotoData> list = ref.read(selectedListProvider).list;
-    Text msg = Text('Save to photolibrary (${list.length})');
-    Text btn = Text('OK', style:TextStyle(fontSize:16, color:Colors.lightBlue));
-    showDialogEx(context, msg, btn, _saveFile, list);
+    List<MyFile> list = ref.read(selectedListProvider).list;
+    if(list.length==0) {
+      showSnackBar('Please select');
+    } else {
+      Text msg = Text('Save to photolibrary (${list.length})');
+      Text btn = Text('OK', style: TextStyle(fontSize: 16, color: Colors.lightBlue));
+      showDialogEx(context, msg, btn, _saveFile, list);
+    }
   }
-  _saveFile(List<PhotoData> list) async {
+  _saveFile(List<MyFile> list) async {
     try {
-      for(PhotoData data in list){
-        if(data.path.contains('.jpg'))
-          await GallerySaver.saveImage(data.path);
-        else if(data.path.contains('.mp4'))
-          await GallerySaver.saveVideo(data.path);
-
-        await File(data.path).delete();
-        if(await File(data.thumb).exists())
-          await File(data.thumb).delete();
-
-        await new Future.delayed(new Duration(milliseconds:100));
+      for(MyFile f in list){
+        if(f.isGallery==false) {
+          if (f.path.contains('.jpg'))
+            await GallerySaver.saveImage(f.path, albumName: 'LongTake');
+          else if (f.path.contains('.mp4'))
+            await GallerySaver.saveVideo(f.path, albumName: 'LongTake');
+          await new Future.delayed(new Duration(milliseconds: 100));
+        }
       }
-      if(this.ref!=null)
-        readFiles(this.ref!);
+      readFiles();
     } on Exception catch (e) {
       print('-- _saveFile ${e.toString()}');
     }
@@ -247,22 +209,24 @@ class PhotoListScreen extends ConsumerWidget {
 
   /// delete file
   _deleteFileWithDialog(BuildContext context, WidgetRef ref) async {
-    List<PhotoData> list = ref.read(selectedListProvider).list;
-    Text msg = Text('Delete files (${list.length})');
-    Text btn = Text('Delete', style:TextStyle(fontSize:16, color:Colors.lightBlue));
-    showDialogEx(context, msg, btn, _deleteFile, list);
+    List<MyFile> list = ref.read(selectedListProvider).list;
+    if(list.length==0) {
+      showSnackBar('Please select');
+    } else {
+      Text msg = Text('Delete files (${list.length})');
+      Text btn = Text('Delete', style: TextStyle(fontSize: 16, color: Colors.lightBlue));
+      showDialogEx(context, msg, btn, _deleteFile, list);
+    }
   }
-
-  _deleteFile(List<PhotoData> list) async {
+  _deleteFile(List<MyFile> list) async {
     try {
-      for(PhotoData data in list){
-        await File(data.path).delete();
-        if(await File(data.thumb).exists())
-          await File(data.thumb).delete();
+      for(MyFile f in list){
+        await File(f.path).delete();
+        if(await File(f.thumb).exists())
+          await File(f.thumb).delete();
         await new Future.delayed(new Duration(milliseconds:100));
       };
-      if(this.ref!=null)
-        readFiles(this.ref!);
+      readFiles();
     } on Exception catch (e) {
       print('-- _deleteFile ${e.toString()}');
     }
@@ -274,7 +238,7 @@ class PhotoListScreen extends ConsumerWidget {
       Text msg,
       Text buttonText,
       Function func,
-      List<PhotoData> list
+      List<MyFile> list
     ) async {
     showDialog(
       context: context,
@@ -297,21 +261,63 @@ class PhotoListScreen extends ConsumerWidget {
   }
 
   String l10n(String text){
-    return Localized.of(context!).text(text);
+    if(_context!=null) {
+      return Localized.of(_context!).text(text);
+    }
+    return '';
+  }
+
+  void showSnackBar(String msg) {
+    if(_context!=null) {
+      final snackBar = SnackBar(content: Text(msg));
+      ScaffoldMessenger.of(_context!).showSnackBar(snackBar);
+    }
   }
 }
 
+/// MyCard
 class MyCard extends ConsumerWidget {
-  MyCard({PhotoData? data}) {
+  final myCardScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
+  MyCard({MyFile? data}) {
     if(data!=null) this.data = data;
   }
 
-  PhotoData data = PhotoData('');
+  MyFile data = MyFile();
   bool _selected = false;
+  WidgetRef? _ref;
+
+  Widget _thumbWidget = Center(
+    child: SizedBox(
+      width:32,height:32,
+      child: CircularProgressIndicator(),
+    ));
+
+  bool _init = false;
+  void init(BuildContext context, WidgetRef ref) async {
+    if(_init == false){
+      _init = true;
+      if(kIsWeb) {
+        _thumbWidget = Image.network('/lib/assets/test.png', fit: BoxFit.cover);
+
+      } else if(await File(data.thumb).exists()==true){
+        _thumbWidget = Image.file(File(data.thumb), fit:BoxFit.cover);
+        ref.read(myCardScreenProvider).notifyListeners();
+
+      } else {
+        // サムネイルファイルがないとき作成
+        await _makeThumb(data.path, data.thumb);
+        _thumbWidget = Image.file(File(data.thumb), fit:BoxFit.cover);
+        ref.read(myCardScreenProvider).notifyListeners();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref){
     _selected = ref.watch(selectedListProvider).contains(data);
+    ref.watch(myCardScreenProvider);
+    this._ref = ref;
+    Future.delayed(Duration.zero, () => init(context,ref));
 
     return Container(
       width: 100.0, height: 100.0,
@@ -337,31 +343,75 @@ class MyCard extends ConsumerWidget {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        if(kIsWeb) Image.network('/lib/assets/test.png',fit:BoxFit.cover)
-        else Image.file(File(data.thumb), fit:BoxFit.cover),
-        
+        // サムネイル
+        _thumbWidget,
+
+        // 日付
         Container(
           child: Text(' ' + DateFormat("MM/dd HH:mm").format(data.date) + ' ',
             style: TextStyle(fontSize:14, color:Colors.white, backgroundColor:Colors.black38),
         ),),
 
+        // 動画アイコン
         if(data.path.contains('.mp4'))
           Positioned(
-            bottom: 0.0, left: 0.0,
-            child: Text(' ' + sec2strtime(data.playtime) + ' ',
-              style: TextStyle(fontSize:14, color:Colors.white, backgroundColor:Colors.black38),
-            ),),
+            left:4.0, bottom:4.0,
+            child: CircleAvatar(
+              radius: 20.0,
+              backgroundColor: Colors.black54,
+              child: Icon(
+                Icons.play_arrow,
+                size: 24,
+                color: Color(0xFFFFFFFF)
+              )
+            )
+          ),
 
+        // 保存済アイコン
+        if(data.isGallery)
+          Positioned(
+            right:4.0, top:4.0,
+            child: CircleAvatar(
+              radius: 20.0,
+              backgroundColor: Colors.black54,
+              child: Icon(
+                Icons.save,
+                size: 24,
+                color: Color(0xFFFFFFFF)
+              )
+            )
+          ),
+
+        // 選択状態
         Positioned(
-          right: 6.0, bottom: 6.0,
+          right:6.0, bottom:6.0,
           child: CircleAvatar(
             backgroundColor: _selected ? Colors.black54 : Color(0x00000000),
-            child: Icon(_selected ? Icons.check : null,
+            child: Icon(
+              _selected ? Icons.check : null,
               size: 36,
               color: Color(0xFFFF3333)
-        ))),
+            )
+          )
+        ),
       ]
     );
+  }
+
+  // サムネイル作成
+  _makeThumb(String videoPath, String thumbPath) async {
+    try{
+      String? s = await video_thumbnail.VideoThumbnail.thumbnailFile(
+          video: videoPath,
+          thumbnailPath: thumbPath,
+          imageFormat: video_thumbnail.ImageFormat.JPEG,
+          maxHeight: 240,
+          quality: 70);
+      if(s!=null && s!=thumbPath)
+        print('-- warn _makeThumb() ${thumbPath} -> ${s}');
+    } on Exception catch (e) {
+      print('-- err _makeThumb() ${e.toString()}');
+    }
   }
 
   String sec2strtime(int sec) {
@@ -375,12 +425,13 @@ class MyCard extends ConsumerWidget {
 
 final previewScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 class PreviewScreen extends ConsumerWidget {
-  PreviewScreen({PhotoData? data}) {
+  PreviewScreen({MyFile? data}) {
     if(data!=null) this.data = data;
-
   }
-  PhotoData data = PhotoData('');
-  VideoPlayerController? _controller;
+
+  MyFile data = MyFile();
+
+  VideoPlayerController? _videoPlayer;
   VideoData? _videoInfo;
   WidgetRef? _ref;
   Image? _img;
@@ -390,11 +441,10 @@ class PreviewScreen extends ConsumerWidget {
     if(_init == false){
       try{
         if(data.path.contains('.mp4')){
-          print('-- init mp4');
           _videoInfo = await FlutterVideoInfo().getVideoInfo(data.path);
-          _controller = VideoPlayerController.file(File(data.path));
-          if(_controller!=null) {
-            _controller!.initialize().then((_) {
+          _videoPlayer = VideoPlayerController.file(File(data.path));
+          if(_videoPlayer!=null) {
+            _videoPlayer!.initialize().then((_) {
               ref.read(previewScreenProvider).notifyListeners();
             });
           } else {
@@ -403,6 +453,7 @@ class PreviewScreen extends ConsumerWidget {
 
         } else if(data.path.contains('.jpg')){
           _img = Image.file(File(data.path), fit:BoxFit.contain);
+          ref.read(previewScreenProvider).notifyListeners();
         }
       } on Exception catch (e) {
         print('-- PreviewScreen.init ${e.toString()}');
@@ -427,6 +478,12 @@ class PreviewScreen extends ConsumerWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap:(){
+            if(_videoPlayer!=null) {
+              if(_videoPlayer!.value.isPlaying) {
+                _videoPlayer!.pause();
+              }
+              _videoPlayer!.dispose();
+            }
             Navigator.of(context).pop();
           },
           child: Stack(children: <Widget>[
@@ -441,15 +498,15 @@ class PreviewScreen extends ConsumerWidget {
     if(kIsWeb) {
       return Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain));
 
-    } else if(data.path.contains('.mp4')) {
-      if(_controller==null || _controller!.value.isInitialized==false){
+    } else if(data.path.contains('.mp4')){
+      if(_videoPlayer==null || _videoPlayer!.value.isInitialized==false){
         return Container();
+
       } else {
+        // アンドロイドの動画は上下反転
         double _previewAngle=0;
-        if(_videoInfo!=null && Platform.isAndroid){
-          if(_videoInfo!.orientation==180){
-            _previewAngle=pi;
-          }
+        if(Platform.isAndroid && _videoInfo!=null && _videoInfo!.orientation==180){
+          _previewAngle=pi;
         }
 
         return Stack(children: <Widget>[
@@ -457,8 +514,8 @@ class PreviewScreen extends ConsumerWidget {
             child: Transform.rotate(
             angle: _previewAngle,
               child:AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!),
+                aspectRatio: _videoPlayer!.value.aspectRatio,
+                child: VideoPlayer(_videoPlayer!),
               ))),
 
           Center(
@@ -466,11 +523,10 @@ class PreviewScreen extends ConsumerWidget {
             backgroundColor: Colors.black54,
             radius: 40.0,
             child: IconButton(
-              icon:Icon(_controller!.value.isPlaying ? Icons.pause : Icons.play_arrow),
+              icon:Icon(_videoPlayer!.value.isPlaying ? Icons.pause : Icons.play_arrow),
               iconSize: 42.0,
-              onPressed:(){
-                print('-- onPressed');
-                _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
+              onPressed:() {
+                _videoPlayer!.value.isPlaying ? _videoPlayer!.pause() : _videoPlayer!.play();
                 if(_ref!=null)
                   _ref!.read(previewScreenProvider).notifyListeners();
               }
@@ -479,11 +535,8 @@ class PreviewScreen extends ConsumerWidget {
         ]);
       }
 
-    } else if(data.path.contains('.jpg')){
-      if(_img!=null)
-        return Container();
-      else
-        return Center(child:_img);
+    } else if(data.path.contains('.jpg')) {
+      return (_img!=null) ? Center(child:_img) : Container();
 
     } else {
       return Center(child:Image.network('/lib/assets/test.png',fit:BoxFit.contain));
@@ -497,7 +550,30 @@ class PreviewScreen extends ConsumerWidget {
         return Container();
       } else {
         return Container(
-          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: EdgeInsets.symmetric(vertical:4, horizontal:8),
+          width:180, height:100,
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children:[
+              getText(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
+              getText('${_videoInfo!.width}x${_videoInfo!.height}'),
+              getText('${(data.byte/1024).toInt()} kb'),
+              getText('${(_videoInfo!.duration!/1000).toInt()} sec'),
+              getText('rotate ${(_videoInfo!.orientation!).toInt()}'),
+           ])
+        );
+      }
+
+    } else if(data.path.contains('.jpg')) {
+      if(_img==null){
+        return Container();
+      } else {
+        return Container(
+          padding: EdgeInsets.symmetric(vertical:4, horizontal:8),
           width:180, height:100,
           decoration: BoxDecoration(
             color: Colors.black54,
@@ -506,29 +582,13 @@ class PreviewScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              getText(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
-              getText('${_videoInfo!.width}x${_videoInfo!.height}'),
-              getText('${(_videoInfo!.duration!/1000).toInt()} sec'),
-              getText('${(data.byte/1024).toInt()} kb'),
-              getText('rotate ${(_videoInfo!.orientation!).toInt()}'),
-           ])
+              getText(DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
+              getText('${_img!.width}x${_img!.height}'),
+              getText('${data.byte/1024} kb'),
+            ]
+          )
         );
       }
-    } else if(data.path.contains('.jpg')) {
-      if(_img==null){
-        return Container();
-      } else {
-        return Row(mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Text('${_img!.width}x${_img!.height}'),
-            SizedBox(width: 8),
-            Text('sz=${data.byte/1024} KB'),
-            SizedBox(width: 8),
-            Text('date=' + DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
-          ]
-        );
-      }
-
     } else {
       return Container();
     }
