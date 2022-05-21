@@ -394,6 +394,8 @@ class CameraScreen extends ConsumerWidget {
         final File file = File(path);
         await file.writeAsBytes(imglib.encodeJpg(img));
         _recordTime = dt;
+      } else {
+        print('photoShooting img=null');
       }
     } catch (e) {
       await MyLog.err('${e.toString()}');

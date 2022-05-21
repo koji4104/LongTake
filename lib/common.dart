@@ -67,10 +67,12 @@ class MyStorage {
 
   // フォトライブラリのファイルリスト
   Future getGallery() async {
+
     galleryFiles.clear();
-    List<Album> videos = await PhotoGallery.listAlbums(mediumType: MediumType.video);
+    List<Album> videos = await PhotoGallery.listAlbums(mediumType: MediumType.image);
     for(Album album in videos) {
-      //if(album.name=='LongTake') {
+      print('-- videos album.name=${album.name}');
+      if(album.name=='LongTake') {
         MediaPage page = await album.listMedia();
         for (Medium media in page.items) {
           File f = await media.getFile();
@@ -81,10 +83,12 @@ class MyStorage {
           galleryFiles.add(data);
           print('-- video.name=${data.name} ${album.name}');
         }
-      //}
+      }
     }
+
     List<Album> images = await PhotoGallery.listAlbums(mediumType: MediumType.image);
     for(Album album in images) {
+      print('-- images album.name=${album.name} -${album.count} -${album.isAllAlbum}');
       if(album.name=='LongTake') {
         MediaPage page = await album.listMedia();
         for (Medium media in page.items) {

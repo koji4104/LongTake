@@ -48,7 +48,11 @@
 	<string>Use LongTake</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Use LongTake</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Use LongTake</string>
 	<key>NSMicrophoneUsageDescription</key>
+	<string>Use LongTake</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Use LongTake</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
