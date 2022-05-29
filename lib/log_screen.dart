@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'common.dart';
 
 class MyLogData {
   String time='';
@@ -34,33 +35,6 @@ String sample = '''
 2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
 2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
 2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-06 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-06 00:20:20\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:20\tuser\terr\tapp\tmessage1
-2022-04-02 00:20:00\tuser\twarn\tapp\tmessage2
-2022-04-06 00:00:20\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:20:00\tuser\tinfo\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:20\tuser\twarn\tapp\tmessage2
-2022-04-06 00:20:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tmessage4
-2022-04-05 00:00:20\tuser\terr\tapp\tmessage5
-2022-04-01 00:00:00\tuser\terr\tapp\tmessage1
-2022-04-06 00:10:00\tuser\twarn\tapp\tstart
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-04 00:00:00\tuser\tinfo\tapp\tstart
-2022-04-05 00:00:00\tuser\tinfo\tapp\tmessage5
-2022-04-07 00:10:00\tuser\terr\tapp\tmessage1
-2022-04-02 00:00:00\tuser\twarn\tapp\tmessage2
-2022-04-03 00:00:00\tuser\tinfo\tapp\tmessage3
-2022-04-06 00:10:00\tuser\tinfo\tapp\tstart
-2022-04-05 00:00:00\tuser\tinfo\tapp\tstart
 ''';
 
 final logListProvider = StateProvider<List<MyLogData>>((ref) {
@@ -138,11 +112,15 @@ class MyLog {
   }
 }
 
+final logScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 class LogScreen extends ConsumerWidget {
+  MyEdge _edge = MyEdge(provider:logScreenProvider);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Future.delayed(Duration.zero, () => readLog(ref));
     List<MyLogData> list = ref.watch(logListProvider);
+    _edge.getEdge(context,ref);
 
     return Scaffold(
       appBar: AppBar(
@@ -150,7 +128,12 @@ class LogScreen extends ConsumerWidget {
         backgroundColor:Color(0xFF000000),
         actions: <Widget>[],
       ),
-      body: getTable(context,ref,list),
+      body: Container(
+        margin: _edge.settingsEdge,
+        child: Stack(children: <Widget>[
+          getTable(context,ref,list),
+        ])
+      )
     );
   }
 
@@ -174,22 +157,13 @@ class LogScreen extends ConsumerWidget {
       spans.add(TextSpan(text:' '+d.msg+'\n'));
     }
 
-    double leftPdd = 8;
-    double rightPdd = 8;
-    double w = MediaQuery.of(context).size.width;
-    if(w>700) {
-      leftPdd = 200;
-      rightPdd = 12;
-    }
-
     return Container(
-      width: MediaQuery.of(context).size.width-leftPdd-20,
+      width: MediaQuery.of(context).size.width-20,
       height: MediaQuery.of(context).size.height-120,
         decoration: BoxDecoration(
           color: Color(0xFF333333),
           borderRadius: BorderRadius.circular(4),
         ),
-      margin: EdgeInsets.fromLTRB(leftPdd,8,rightPdd,8),
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,
           padding: EdgeInsets.fromLTRB(8,8,8,8),

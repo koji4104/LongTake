@@ -10,19 +10,15 @@ import 'common.dart';
 class EnvData {
   int val;
   String key = '';
-  List<int> vals;
-  List<String> keys;
-  String name;
-  String desc;
-  String pref;
+  List<int> vals = [];
+  List<String> keys = [];
+  String name = '';
 
   EnvData({
     required int this.val,
     required List<int> this.vals,
     required List<String> this.keys,
-    required String this.name,
-    required String this.desc,
-    required String this.pref}){
+    required String this.name}){
     set(val);
   }
 
@@ -46,54 +42,58 @@ class EnvData {
 
 /// Environment
 class Environment {
-  /// 1=video, 2=image, 3=audio
+  /// 形式 1=video, 2=image, 3=audio
   EnvData recording_mode = EnvData(
     val:1,
     vals:[1,2],
     keys:['mode_video','mode_image'],
     name:'recording_mode',
-    desc:'recording_mode_desc',
-    pref:'recording_mode',
   );
+  /// ビデオ分割
   EnvData video_interval_sec = EnvData(
     val:3600,
     vals:[30,1800,3600,7200],
     keys:['30 sec','30','60','120'],
     name:'video_interval_sec',
-    desc:'video_interval_sec_desc',
-    pref:'video_interval_sec',
   );
+  /// 写真撮影間隔
   EnvData image_interval_sec = EnvData(
     val:60,
     vals:[10,60,300,600],
     keys:['10 sec','1','5','10'],
     name:'image_interval_sec',
-    desc:'image_interval_sec_desc',
-    pref:'image_interval_sec',
   );
   EnvData autostop_sec = EnvData(
     val:3600,
     vals:[60,3600,21600,43200,86400],
     keys:['60 sec','1','6','12','24'],
     name:'autostop_sec',
-    desc:'autostop_sec_desc',
-    pref:'autostop_sec',
   );
-  EnvData max_size_gb = EnvData(
-    val:10,
-    vals:[1,10,100],
-    keys:['1','10','100'],
-    name:'max_size_gb',
-    desc:'max_size_gb_desc',
-    pref:'max_size_gb',
+
+  EnvData save_mb = EnvData(
+    val:256,
+    vals:[128,256,512,1024,2048,4096,8192,16384],
+    keys:['128 MB','256 MB','512 MB','1 GB','2 GB','4 GB','8 GB','16 GB'],
+    name:'save_mb',
+  );
+  EnvData ex_save_mb = EnvData(
+    val:256,
+    vals:[128,256,512,1024,2048,4096,8192,16384],
+    keys:['128 MB','256 MB','512 MB','1 GB','2 GB','4 GB','8 GB','16 GB'],
+    name:'ex_save_mb',
+  );
+  /// 外部ストレージ 0=None 1=PhotoLibrary
+  EnvData ex_storage = EnvData(
+    val:0,
+    vals:[0,1],
+    keys:['None','PhotoLibrary'],
+    name:'ex_storage',
   );
   EnvData camera_height = EnvData(
     val:480,
     vals:[240,480,720,1080],
     keys:['320X240','640x480','1280x720','1920x1080'],
     name:'camera_height',
-    desc:'camera_height_desc',
-    pref:'camera_height',
   );
   // 0=back, 1=Front(Face)
   EnvData camera_pos = EnvData(
@@ -101,18 +101,20 @@ class Environment {
     vals:[0,1],
     keys:['back','front'],
     name:'camera_pos',
-    desc:'camera_pos_desc',
-    pref:'camera_pos',
   );
 
-  load() async {
-    if(kIsWeb) return;
+  Future load() async {
+    if(kIsWeb)
+      return;
+    print('-- load()');
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       _loadSub(prefs, recording_mode);
       _loadSub(prefs, video_interval_sec);
       _loadSub(prefs, image_interval_sec);
-      _loadSub(prefs, max_size_gb);
+      _loadSub(prefs, save_mb);
+      _loadSub(prefs, ex_storage);
+      _loadSub(prefs, ex_save_mb);
       _loadSub(prefs, autostop_sec);
       _loadSub(prefs, camera_height);
       _loadSub(prefs, camera_pos);
@@ -121,13 +123,14 @@ class Environment {
     }
   }
   _loadSub(SharedPreferences prefs, EnvData data) {
-    data.set(prefs.getInt(data.pref) ?? data.val);
+    data.set(prefs.getInt(data.name) ?? data.val);
+
   }
 
-  save(EnvData data) async {
+  Future save(EnvData data) async {
     if(kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(data.pref, data.val);
+    await prefs.setInt(data.name, data.val);
   }
 }
 
@@ -136,10 +139,14 @@ final settingsScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier())
 class SettingsScreen extends ConsumerWidget {
   SettingsScreen(){}
   Environment env = new Environment();
+  bool bInit = false;
 
-  Future<bool> load() async {
+  Future init() async {
+    if(bInit) return;
+      bInit = true;
     try {
       await env.load();
+      _ref!.read(settingsScreenProvider).notifyListeners();
     } on Exception catch (e) {
       print('-- SettingsScreen init e=' + e.toString());
     }
@@ -154,10 +161,11 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     _context = context;
     _ref = ref;
+    Future.delayed(Duration.zero, () => init());
     ref.watch(settingsScreenProvider);
 
     _edge.getEdge(context,ref);
-
+    print('-- build');
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pop(true);
@@ -180,38 +188,31 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget getList(BuildContext context) {
-    return FutureBuilder(
-      future: load(),
-      builder: (context, snapshot) {
-        if(snapshot.hasData == false)
-          return SingleChildScrollView();
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(8,8,8,8),
-          child: Column(children: [
-            MyValue(data: env.recording_mode),
-            MyValue(data: env.video_interval_sec),
-            MyValue(data: env.image_interval_sec),
-            MyValue(data: env.autostop_sec),
-            MyValue(data: env.max_size_gb),
-            MyValue(data: env.camera_height),
-
-            MyText(Localized.of(context).text("precautions")),
-
-            MyListTile(
-              title:Text('Logs'),
-              onTap:(){
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => LogScreen(),
-                    )
-                  );
-                }
-              ),
-            ]
-          )
-        );
-      }
-   );
+    int m=env.recording_mode.val; // 1=video 2=image
+    int e=env.ex_storage.val; // 0=none 1=library
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(8,8,8,8),
+      child: Column(children: [
+        MyValue(data: env.recording_mode),
+        m==1 ? MyValue(data: env.video_interval_sec) : MyValue(data: env.image_interval_sec),
+        MyValue(data: env.save_mb),
+        MyValue(data: env.ex_storage),
+        if(e==1) MyValue(data: env.ex_save_mb),
+        MyValue(data: env.autostop_sec),
+        MyValue(data: env.camera_height),
+        MyText(Localized.of(context).text("precautions")),
+        MyListTile(
+          title:Text('Logs'),
+          onTap:(){
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => LogScreen(),
+              )
+            );
+          }
+        ),
+      ])
+    );
   }
 
   Widget MyText(String label) {
@@ -270,14 +271,16 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-final RadioListScreenProvider = StateProvider<int>((ref) {
+final radioSelectedProvider = StateProvider<int>((ref) {
   return 0;
 });
+final radioListScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 class RadioListScreen extends ConsumerWidget {
   int selected = 0;
   EnvData data;
   WidgetRef? ref;
   BuildContext? context;
+  MyEdge _edge = MyEdge(provider:radioListScreenProvider);
 
   RadioListScreen({required EnvData this.data}){
     selected = data.val;
@@ -285,14 +288,11 @@ class RadioListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(RadioListScreenProvider);
+    ref.watch(radioSelectedProvider);
+    ref.watch(radioListScreenProvider);
     this.context = context;
     this.ref = ref;
-
-    double leftPadding = 8;
-    double w = MediaQuery.of(context).size.width;
-    if(w>700)
-      leftPadding = 200;
+    _edge.getEdge(context,ref);
 
     return WillPopScope(
       onWillPop:() async {
@@ -302,7 +302,7 @@ class RadioListScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(l10n(data.name)), backgroundColor:Color(0xFF000000),),
         body: Container(
-          padding: EdgeInsets.fromLTRB(leftPadding,12,8,8),
+          margin: _edge.settingsEdge,
           child:getListView()
         ),
       )
@@ -314,7 +314,7 @@ class RadioListScreen extends ConsumerWidget {
     for(int i=0; i<data.vals.length; i++){
       list.add(
         Container(
-          margin: EdgeInsets.symmetric(horizontal:14, vertical:3),
+          margin: EdgeInsets.symmetric(horizontal:14, vertical:0),
           child: RadioListTile(
           shape: BeveledRectangleBorder(
             borderRadius: BorderRadius.circular(3),
@@ -327,15 +327,14 @@ class RadioListScreen extends ConsumerWidget {
           onChanged: (value) => _onRadioSelected(data.vals[i]),
       )));
     }
-    list.add(MyText(data.desc));
+    list.add(MyText(data.name+'_desc')); // 説明
     return Column(children:list);
-
   }
 
   _onRadioSelected(value) {
     if(ref!=null){
       selected = value;
-      ref!.read(RadioListScreenProvider.state).state = selected;
+      ref!.read(radioSelectedProvider.state).state = selected;
     };
   }
 
@@ -348,10 +347,10 @@ class RadioListScreen extends ConsumerWidget {
 
   Widget MyText(String label) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal:8, vertical:6),
+      padding: EdgeInsets.symmetric(horizontal:10, vertical:6),
       child: Align(
       alignment: Alignment.centerLeft,
-      child: Text(l10n(label), style:TextStyle(fontSize:12, color:Colors.white)),
+      child: Text(l10n(label), style:TextStyle(fontSize:13, color:Colors.white)),
     ));
   }
 }

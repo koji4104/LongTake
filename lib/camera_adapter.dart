@@ -1,62 +1,38 @@
-/*
-  CameraController? _controller;
-
-  void init() async {
-    final cameras = await availableCameras();
-    if (cameras.length > 0){
-      _controller = CameraController(
-        cameras[0],
-        ResolutionPreset.high,
-        imageFormatGroup:ImageFormatGroup.bgra8888);
-      _controller!.initialize();
-    }
-  }
-
-  Future<void> test() async {
-    imglib.Image? img = await CameraAdapter.getImage(_controller);
-  }
-*/
-
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as imglib;
 import 'dart:async';
 
 class CameraAdapter {
 
-  static Future<imglib.Image?> getImage(CameraController? controller) async {
-    imglib.Image? img;
+  /// Take image silently
+  ///
+  /// i.g.
+  /// imglib.Image? img = await CameraAdapter.takeImage(_controller);
+  ///
+  /// If it fails.
+  /// CameraController.imageFormatGroup yuv420 -> bgra8888
+  static Future<imglib.Image?> takeImage(CameraController? controller) async {
     if(controller==null) {
       return null;
     }
-
-    if(controller.value.isStreamingImages) {
-      await controller.stopImageStream();
-    }
-
-    bool b = true;
-    if(controller.value.isStreamingImages == false) {
-      controller.startImageStream((CameraImage image) async {
-        if(b) {
-          b = false;
-          img = await _toImage(controller, image);
-        }
-      });
-    }
-
+    imglib.Image? img;
+    controller.startImageStream((CameraImage cameraImage) async {
+      controller.stopImageStream();
+      img = await _toImage(controller, cameraImage);
+    });
     for (var i = 0; i < 200; i++) {
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds:100));
       if (img != null)
         break;
     }
-    controller.stopImageStream();
     return img;
   }
 
   static Future<imglib.Image?> _toImage(CameraController? controller, CameraImage? cameraImage) async {
-    imglib.Image? img;
     if(controller==null || cameraImage==null) {
       return null;
     }
+    imglib.Image? img;
     if (cameraImage.format.group == ImageFormatGroup.yuv420) {
       img = await _fromYuv(cameraImage);
       if(img!=null){

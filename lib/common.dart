@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:photo_gallery/photo_gallery.dart';
 import 'package:path/path.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 class MyFile{
   String path = '';
@@ -15,17 +16,37 @@ class MyFile{
   DateTime date = DateTime(2000,1,1);
   int byte = 0;
   String thumb = '';
-  bool isGallery = false;
+  bool isLibrary = false;
 }
 
 class MyStorage {
   List<MyFile> files = [];
-  List<MyFile> galleryFiles = [];
-  int appdataTotalBytes = 0;
-  int galleryTotalBytes = 0;
+  List<MyFile> libraryFiles = [];
+  int totalBytes = 0;
+  int libraryTotalBytes = 0;
 
-  // アプリ内データのファイルリスト
-  Future getAppdata() async {
+  bool checkedAlbum = false;
+  Future createAlbumIfNot() async {
+    if(checkedAlbum)
+      return;
+    checkedAlbum = true;
+    if(Platform.isIOS) {
+      bool b = true;
+      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList();
+      for (AssetPathEntity a in albums) {
+        if (a.name == 'LongTake') {
+          b = false;
+        }
+      }
+      if(b)
+        PhotoManager.editor.iOS.createAlbum('LongTake');
+    }
+  }
+
+  // アプリ内データ
+  Future getInApp() async {
+    if(kIsWeb) return;
+    final dt1 = DateTime.now();
     files.clear();
     final Directory appdir = await getApplicationDocumentsDirectory();
     final photodir = Directory('${appdir.path}/photo');
@@ -41,7 +62,7 @@ class MyStorage {
       f.path = e.path;
       f.date = e.statSync().modified;
       f.name = basename(f.path);
-      f.byte = await File(f.path).length();
+      f.byte = e.statSync().size;
 
       if(f.path.contains('.mp4')) {
         f.thumb = '${appdir.path}/thumb/' + basenameWithoutExtension(f.path) + ".jpg";
@@ -49,62 +70,108 @@ class MyStorage {
         f.thumb = f.path;
       }
 
-      for (MyFile gf in galleryFiles) {
-        if(gf.name == f.name) {
-          f.isGallery = true;
-          print('-- [${gf.name}][${f.name}]');
+      for (MyFile lf in libraryFiles) {
+        if(lf.name == f.name) {
+          f.isLibrary = true;
         }
       }
-
       files.add(f);
     }
 
-    appdataTotalBytes = 0;
+    totalBytes = 0;
     for (MyFile f in files) {
-      appdataTotalBytes += f.byte;
+      totalBytes += f.byte;
     }
+
+    print('-- inapp files=${files.length}'
+        ' total(kb)=${(totalBytes/1024).toInt()}'
+        ' msec=${DateTime.now().difference(dt1).inMilliseconds}');
   }
 
-  // フォトライブラリのファイルリスト
-  Future getGallery() async {
+  // フォトライブラリ
+  Future getLibrary() async {
+    if(kIsWeb) return;
+    /// Android (AndroidManifest.xml)
+    /// READ_EXTERNAL_STORAGE (REQUIRED)
+    /// WRITE_EXTERNAL_STORAGE
+    /// ACCESS_MEDIA_LOCATION
+    /// iOS (Info.plist)
+    /// NSPhotoLibraryUsageDescription
+    /// NSPhotoLibraryAddUsageDescription
+    final dt1 = DateTime.now();
+    libraryFiles.clear();
+    if(Platform.isIOS && !kIsWeb) {
+      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList();
+      print('-- ios albums.length=${albums.length}');
+      for (AssetPathEntity a in albums) {
+        if (a.name == 'LongTake') {
+          //List<AssetEntity> paths = await a.getAssetListPaged(page:0, size:100);
+          List<AssetEntity> paths = await a.getAssetListPaged(0, 100);
+          for (AssetEntity p in paths) {
+            File? f = await p.loadFile(isOrigin:true);
+            if(f!=null) {
+              MyFile d = MyFile();
+              d.path = f.path;
+              d.name = basename(f.path);
+              d.byte = f.lengthSync();
+              libraryFiles.add(d);
+              print('-- P name=${d.name} -${d.byte} -${a.name}');
+            }
+          }
+        }
+      }
+    } else {
+      List<Album> videos = await PhotoGallery.listAlbums(mediumType: MediumType.video);
+      for (Album album in videos) {
+        if (album.name == 'LongTake') {
+          MediaPage page = await album.listMedia();
+          for (Medium media in page.items) {
+            File f = await media.getFile();
+            MyFile data = MyFile();
+            data.path = f.path;
+            data.name = basename(f.path);
+            data.byte = await f.length();
+            libraryFiles.add(data);
+            print('-- video.name=${data.name} ${album.name}');
+          }
+        }
+      }
 
-    galleryFiles.clear();
-    List<Album> videos = await PhotoGallery.listAlbums(mediumType: MediumType.image);
-    for(Album album in videos) {
-      print('-- videos album.name=${album.name}');
-      if(album.name=='LongTake') {
-        MediaPage page = await album.listMedia();
-        for (Medium media in page.items) {
-          File f = await media.getFile();
-          MyFile data = new MyFile();
-          data.path = f.path;
-          data.name = basename(f.path);
-          data.byte = await f.length();
-          galleryFiles.add(data);
-          print('-- video.name=${data.name} ${album.name}');
+      List<Album> images = await PhotoGallery.listAlbums(mediumType: MediumType.image);
+      for (Album album in images) {
+        if (album.name == 'LongTake') {
+          MediaPage page = await album.listMedia();
+          for (Medium media in page.items) {
+            File f = await media.getFile();
+            MyFile data = MyFile();
+            data.path = f.path;
+            data.name = basename(f.path);
+            data.byte = await f.length();
+            libraryFiles.add(data);
+            print('-- image.name=${data.name} ${album.name}');
+          }
         }
       }
     }
 
-    List<Album> images = await PhotoGallery.listAlbums(mediumType: MediumType.image);
-    for(Album album in images) {
-      print('-- images album.name=${album.name} -${album.count} -${album.isAllAlbum}');
-      if(album.name=='LongTake') {
-        MediaPage page = await album.listMedia();
-        for (Medium media in page.items) {
-          File f = await media.getFile();
-          MyFile data = new MyFile();
-          data.path = f.path;
-          data.name = basename(f.path);
-          data.byte = await f.length();
-          galleryFiles.add(data);
-          print('-- image.name=${data.name} ${album.name}');
-        }
-      }
+    libraryTotalBytes = 0;
+    for (MyFile f in libraryFiles) {
+      libraryTotalBytes += f.byte;
     }
-    galleryTotalBytes = 0;
-    for (MyFile f in galleryFiles) {
-      galleryTotalBytes += f.byte;
+    print('-- Library files=${libraryFiles.length}'
+        ' total(kb)=${(libraryTotalBytes/1024).toInt()}'
+        ' msec=${DateTime.now().difference(dt1).inMilliseconds}');
+  }
+
+  saveLibrary(String path) async {
+    try {
+      if (path.contains('.jpg')) {
+        await GallerySaver.saveImage(path, albumName: 'LongTake');
+      } else if (path.contains('.mp4')) {
+        await GallerySaver.saveVideo(path, albumName: 'LongTake');
+      }
+    } on Exception catch (e) {
+      print('-- err saveGallery=${e.toString()}');
     }
   }
 }
@@ -157,13 +224,13 @@ class MyEdge {
     _width = MediaQuery.of(context).size.width;
     print('-- getEdge() width=${_width.toInt()}');
 
-    if (Platform.isAndroid) {
-      NativeDeviceOrientation ori = await NativeDeviceOrientationCommunicator()
-          .orientation();
+    if (!kIsWeb && Platform.isAndroid) {
+      print('-- isAndroid');
+      NativeDeviceOrientation ori = await NativeDeviceOrientationCommunicator().orientation();
       switch (ori) {
         case NativeDeviceOrientation.landscapeRight:
           homebarEdge = EdgeInsets.only(left: homebarWidth);
-          print('-- landscapeRight');
+          print('-- droid landscapeRight');
           break;
         case NativeDeviceOrientation.landscapeLeft:
           homebarEdge = EdgeInsets.only(right: homebarWidth);
@@ -184,7 +251,6 @@ class MyEdge {
     this.settingsEdge = EdgeInsets.all(margin);
     this.settingsEdge = this.settingsEdge.add(leftEdge);
     this.settingsEdge = this.settingsEdge.add(homebarEdge);
-
     if(_provider!=null)
       ref.read(_provider!).notifyListeners();
   }

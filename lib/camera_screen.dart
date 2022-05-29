@@ -20,7 +20,6 @@ import 'package:video_thumbnail/video_thumbnail.dart' as video_thumbnail;
 import 'common.dart';
 import 'camera_adapter.dart';
 
-
 bool disableCamera = kIsWeb; // true=test
 final bool _testMode = true;
 
@@ -53,14 +52,17 @@ class CameraScreen extends ConsumerWidget {
   AppLifecycleState? _state;
 
   MyEdge _edge = MyEdge(provider:cameraScreenProvider);
+  MyStorage _storage = new MyStorage();
 
   void init(BuildContext context, WidgetRef ref) {
     if(_timer == null)
       _timer = Timer.periodic(Duration(seconds:1), _onTimer);
     if(bInit == false){
+      bInit = true;
       _env.load();
       _initCameraSync(ref);
-      bInit = true;
+      _storage.getInApp();
+      _storage.getLibrary();
     }
   }
 
@@ -144,7 +146,7 @@ class CameraScreen extends ConsumerWidget {
         // PhotoList screen button
         if(_isScreensaver==false)
           MyButton(
-            top: 50.0, left: 30.0,
+            top:50.0, left:30.0,
             icon: Icon(Icons.folder, color: Colors.white),
             onPressed: () {
               Navigator.of(context).push(
@@ -250,7 +252,7 @@ class CameraScreen extends ConsumerWidget {
     });
   }
 
-  /// _onCameraSwitch
+  /// スイッチ
   Future<void> _onCameraSwitch(WidgetRef ref) async {
     if(disableCamera || _cameras.length<2)
       return;
@@ -300,6 +302,7 @@ class CameraScreen extends ConsumerWidget {
     _isRecording = true;
     _startTime = DateTime.now();
     _batteryLevelStart = await _battery.batteryLevel;
+    _storage.getInApp();
 
     if(_env.recording_mode.val==1) {
       startRecording();
@@ -368,7 +371,12 @@ class CameraScreen extends ConsumerWidget {
     try {
       if(_controller!.value.isRecordingVideo) {
         XFile xfile = await _controller!.stopVideoRecording();
-        moveFile(File(xfile.path), await getSavePath('.mp4'));
+        String dst = await getSavePath('.mp4');
+        moveFile(src:xfile.path, dst:dst);
+        if(_env.ex_storage.val==1
+            && _storage.libraryTotalBytes/1024/1024<_env.ex_save_mb.val){
+          _storage.saveLibrary(dst);
+        }
       }
     } on CameraException catch (e) {
       await MyLog.err(e.code + ' ' + (e.description ?? ''));
@@ -388,14 +396,18 @@ class CameraScreen extends ConsumerWidget {
     _recordTime = null;
     DateTime dt = DateTime.now();
     try {
-      imglib.Image? img = await CameraAdapter.getImage(_controller);
+      imglib.Image? img = await CameraAdapter.takeImage(_controller);
       if(img!=null){
         String path = await getSavePath('.jpg');
         final File file = File(path);
         await file.writeAsBytes(imglib.encodeJpg(img));
+        if(_env.ex_storage.val==1
+            && _storage.libraryTotalBytes/1024/1024<_env.ex_save_mb.val){
+          _storage.saveLibrary(path);
+        }
         _recordTime = dt;
       } else {
-        print('photoShooting img=null');
+        print('-- photoShooting img=null');
       }
     } catch (e) {
       await MyLog.err('${e.toString()}');
@@ -404,25 +416,26 @@ class CameraScreen extends ConsumerWidget {
 
   //src=/var/mobile/Containers/Data/Application/F168A64A-F632-469D-8CD6-390371BE4FAF/Documents/camera/videos/REC_E8ED36E1-3966-43A1-AB34-AA8AD34CEA08.mp4
   //dst=/var/mobile/Containers/Data/Application/F168A64A-F632-469D-8CD6-390371BE4FAF/Documents/photo/2022-0430-210906.mp4
-  Future<File> moveFile(File sourceFile, String newPath) async {
+  Future<File> moveFile({required String src, required String dst}) async {
+    File srcfile = File(src);
     try {
-      if(sourceFile.exists()==false) {
-        MyLog.warn('moveFile not exists');
-        await Future.delayed(Duration(milliseconds:100));
+      if (await srcfile.exists() == false) {
+        MyLog.warn('move file not exists');
+        await Future.delayed(Duration(milliseconds: 100));
+        if (await srcfile.exists() == false) {
+          MyLog.warn('move file not exists 2');
+          await Future.delayed(Duration(milliseconds: 100));
+        }
       }
-      if(sourceFile.exists()==false) {
-        MyLog.warn('moveFile not exists 2');
-        await Future.delayed(Duration(milliseconds:100));
-      }
-      print('-- moveFile src=${sourceFile.path}');
-      print('-- moveFile dst=${newPath}');
-      return await sourceFile.rename(newPath);
+      print('-- move file src=${src}');
+      print('-- move file dst=${dst}');
+      return await srcfile.rename(src);
 
     } on FileSystemException catch (e) {
-      MyLog.err('moveFile e=${e.message} path=${e.path}');
-      final newFile = await sourceFile.copy(newPath);
-      await sourceFile.delete();
-      return newFile;
+      MyLog.err('move file e=${e.message} path=${e.path}');
+      final newfile = await srcfile.copy(dst);
+      await srcfile.delete();
+      return newfile;
     }
   }
 
@@ -518,7 +531,7 @@ class CameraScreen extends ConsumerWidget {
 
       // あふれた分を削除
       for(int i=0; i<1000; i++) {
-        if (totalByte < _env.max_size_gb.val*1024*1024*1024)
+        if (totalByte < _env.save_mb.val*1024*1024)
           break;
         totalByte -= await File(_files.last.path).length();
         await File(_files.last.path).delete();

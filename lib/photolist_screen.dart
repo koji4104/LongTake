@@ -15,6 +15,7 @@ import 'package:video_player/video_player.dart';
 import 'dart:math';
 import 'common.dart';
 import 'package:photo_gallery/photo_gallery.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 final photoListScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
@@ -57,46 +58,42 @@ class PhotoListScreen extends ConsumerWidget {
         title: Text(l10n("photolist_title")),
         backgroundColor:Color(0xFF000000),
         actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.save),
-            iconSize: 32.0,
-            onPressed: () => _saveFileWithDialog(context,ref),
-          ),
-          IconButton(
-            icon: Icon(Icons.delete),
-            iconSize: 32.0,
-            onPressed: () => _deleteFileWithDialog(context,ref),
-          ),
-          SizedBox(width: 10),
         ],
       ),
-      body:
-        Container(
+      body: Container(
         margin: _edge.homebarEdge,
-        child:
-        Stack(children: <Widget>[
-
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Icon(Icons.image, size: 12.0, color: Colors.white),
-              SizedBox(width: 4),
-              Text(num.toString()),
-              SizedBox(width: 8),
-              Icon(Icons.folder, size: 12.0, color: Colors.white),
-              SizedBox(width: 4),
-              Text(sizemb.toString() + ' MB'),
-            ]
-          )
-        ),
-        Container(
-          margin: EdgeInsets.only(top:24),
-          child:getListView(context,ref),
-          )
+        child: Stack(children: <Widget>[
+          Positioned(
+            top:0, left:0, right:0,
+            height: 50,
+            child: Container(
+              color: Color(0xFF444444),
+              child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(width: 50),
+                IconButton(
+                  icon: Icon(Icons.save),
+                  iconSize: 32.0,
+                  onPressed: () => _saveFileWithDialog(context,ref),
+                ),
+                Expanded(child: Text(num.toString() +' pcs '+sizemb.toString() + ' mb',textAlign:TextAlign.center)),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  iconSize: 32.0,
+                  onPressed: () => _deleteFileWithDialog(context,ref),
+                ),
+                SizedBox(width: 50),
+              ]
+            )
+          )),
+          Container(
+            margin: EdgeInsets.only(top:52),
+            child:getListView(context,ref),
+          ),
         ])
-    ));
+      )
+    );
   }
 
   Widget getListView(BuildContext context, WidgetRef ref) {
@@ -120,10 +117,9 @@ class PhotoListScreen extends ConsumerWidget {
   // /data/user/0/com.example.longtake/app_flutter/photo/2022-0417-170926.mp4
   Future<bool> readFiles() async {
     try {
-      await _storage.getGallery();
-
+      await _storage.getLibrary();
       fileList.clear();
-      int totalBytes = 0;
+
       if (kIsWeb) {
         for (int i = 1; i < 30; i++) {
           MyFile f = new MyFile();
@@ -137,7 +133,7 @@ class PhotoListScreen extends ConsumerWidget {
       } else {
         // ビデオ（画像）リスト
         final Directory appdir = await getApplicationDocumentsDirectory();
-        await _storage.getAppdata();
+        await _storage.getInApp();
 
         // サムネイルリスト
         final _thumbdir = Directory('${appdir.path}/thumb');
@@ -149,26 +145,25 @@ class PhotoListScreen extends ConsumerWidget {
         }
         fileList = _storage.files;
 
+        // 未使用のサムネイルを削除
         for (MyFile f in fileList) {
           if(f.path.contains('.mp4')) {
             if (_thumbs.indexOf(f.thumb) >= 0) {
               _thumbs.removeAt(_thumbs.indexOf(f.thumb));
             }
           }
-
-        } // for(files)
-
-        // 未使用のサムネイルを削除
+        }
         for (String u1 in _thumbs) {
           if (await File(u1).exists()) {
             await File(u1).delete();
           }
         }
+
       } // if(kIsWeb) else
 
       if(_ref!=null) {
-        _ref!.read(photoListProvider).num = fileList.length;
-        _ref!.read(photoListProvider).size = totalBytes;
+        _ref!.read(photoListProvider).num = _storage.files.length;
+        _ref!.read(photoListProvider).size = _storage.totalBytes;
         _ref!.read(photoListProvider).notifyListeners();
         _ref!.read(selectedListProvider).clear();
       }
@@ -193,12 +188,9 @@ class PhotoListScreen extends ConsumerWidget {
   _saveFile(List<MyFile> list) async {
     try {
       for(MyFile f in list){
-        if(f.isGallery==false) {
-          if (f.path.contains('.jpg'))
-            await GallerySaver.saveImage(f.path, albumName: 'LongTake');
-          else if (f.path.contains('.mp4'))
-            await GallerySaver.saveVideo(f.path, albumName: 'LongTake');
-          await new Future.delayed(new Duration(milliseconds: 100));
+        if(f.isLibrary==false) {
+          await _storage.saveLibrary(f.path);
+          await new Future.delayed(new Duration(milliseconds:100));
         }
       }
       readFiles();
@@ -368,7 +360,7 @@ class MyCard extends ConsumerWidget {
           ),
 
         // 保存済アイコン
-        if(data.isGallery)
+        if(data.isLibrary)
           Positioned(
             right:4.0, top:4.0,
             child: CircleAvatar(
