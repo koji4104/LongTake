@@ -53,13 +53,13 @@ class CameraAdapter {
     final int height = image.height;
 
     if(image.planes.length<3) {
-      print('err convertYuv() planes.length=${image.planes.length}');
+      print('err _fromYuv() planes.length=${image.planes.length}');
       return null;
     } else if(image.planes[1].bytesPerPixel==null) {
-      print('err convertYuv() planes[1].bytesPerPixel=null');
+      print('err _fromYuv() planes[1].bytesPerPixel=null');
       return null;
     } else if(image.planes[0].bytes.length<width*height) {
-      print('err convertYuv() planes[0].bytes.length=${image.planes[0].bytes.length}');
+      print('err _fromYuv() planes[0].bytes.length=${image.planes[0].bytes.length}');
       return null;
     }
 
@@ -84,7 +84,7 @@ class CameraAdapter {
       }
       return img;
     } catch (e) {
-      print("err convertYuv() " + e.toString());
+      print("err _fromYuv() " + e.toString());
     }
     return null;
   }

@@ -16,6 +16,7 @@ import 'dart:math';
 import 'common.dart';
 import 'package:photo_gallery/photo_gallery.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:image/image.dart' as imglib;
 
 final photoListScreenProvider = ChangeNotifierProvider((ref) => ChangeNotifier());
 
@@ -158,7 +159,6 @@ class PhotoListScreen extends ConsumerWidget {
             await File(u1).delete();
           }
         }
-
       } // if(kIsWeb) else
 
       if(_ref!=null) {
@@ -422,12 +422,12 @@ class PreviewScreen extends ConsumerWidget {
   }
 
   MyFile data = MyFile();
-
   VideoPlayerController? _videoPlayer;
   VideoData? _videoInfo;
   WidgetRef? _ref;
   Image? _img;
   bool _init = false;
+  MyEdge _edge = MyEdge(provider:previewScreenProvider);
 
   void init(BuildContext context, WidgetRef ref) async {
     if(_init == false){
@@ -459,6 +459,7 @@ class PreviewScreen extends ConsumerWidget {
     Future.delayed(Duration.zero, () => init(context,ref));
     ref.watch(previewScreenProvider);
     this._ref = ref;
+    _edge.getEdge(context,ref);
 
     return Scaffold(
       appBar: AppBar(
@@ -466,7 +467,7 @@ class PreviewScreen extends ConsumerWidget {
         actions: <Widget>[],
       ),
       body: Container(
-        margin: EdgeInsets.all(10),
+        margin: _edge.homebarEdge,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap:(){
@@ -543,19 +544,19 @@ class PreviewScreen extends ConsumerWidget {
       } else {
         return Container(
           padding: EdgeInsets.symmetric(vertical:4, horizontal:8),
-          width:180, height:100,
+          width:160, height:104,
           decoration: BoxDecoration(
             color: Colors.black54,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children:[
               getText(DateFormat("yyyy/MM/dd HH:mm:ss").format(data.date)),
-              getText('${_videoInfo!.width}x${_videoInfo!.height}'),
-              getText('${(data.byte/1024).toInt()} kb'),
+              getText('${_videoInfo!.width} x ${_videoInfo!.height}'),
+              getText('${(data.byte/1024).toInt()} KB'),
               getText('${(_videoInfo!.duration!/1000).toInt()} sec'),
-              getText('rotate ${(_videoInfo!.orientation!).toInt()}'),
+              getText('${(_videoInfo!.orientation!).toInt()} deg'),
            ])
         );
       }
@@ -566,17 +567,17 @@ class PreviewScreen extends ConsumerWidget {
       } else {
         return Container(
           padding: EdgeInsets.symmetric(vertical:4, horizontal:8),
-          width:180, height:100,
+          width:160, height:66,
           decoration: BoxDecoration(
             color: Colors.black54,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               getText(DateFormat("yyyy-MM-dd HH:mm:ss").format(data.date)),
-              getText('${_img!.width}x${_img!.height}'),
-              getText('${data.byte/1024} kb'),
+              getText('${_img!.width} x ${_img!.height}'),
+              getText('${(data.byte/1024).toInt()} KB'),
             ]
           )
         );
